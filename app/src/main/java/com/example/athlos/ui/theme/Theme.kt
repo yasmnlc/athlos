@@ -5,7 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-private val DarkGreen = Color(0xFF123736)
+val DarkGreen = Color(0xFF123736)
 
 private val DarkColorScheme = darkColorScheme(
     primary = DarkGreen,

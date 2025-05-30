@@ -147,7 +147,7 @@ fun RegisterScreen(navController: NavHostController) {
         Button(onClick = {
             navController.navigate("main") { popUpTo("register") { inclusive = true } }
         }) {
-            Text("Pular")
+            Text("Cadastre-se")
         }
     }
 }
