@@ -1,3 +1,4 @@
+// MainActivity.kt
 package com.example.athlos
 
 import android.os.Bundle
@@ -24,6 +25,7 @@ import kotlinx.coroutines.launch
 import android.util.Log
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth // Importa FirebaseAuth
+import androidx.compose.material.icons.filled.LocalDrink // Importe para o ícone de água
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,9 +57,9 @@ fun AthlosApp() {
     NavHost(navController = mainNavController, startDestination = "splash") {
         composable("splash") { SplashScreen(mainNavController) }
         composable("login") { LoginScreen(mainNavController) }
-        composable("register") { RegisterScreen(mainNavController) } // Passa mainNavController
+        composable("register") { RegisterScreen(mainNavController) }
         composable("main") {
-            MainScreenWithBottomNav(mainNavController) // Passa mainNavController
+            MainScreenWithBottomNav(mainNavController)
         }
         composable("settings") { SettingsScreen() }
     }
@@ -73,11 +75,11 @@ val drawerItems = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreenWithBottomNav(mainNavController: NavHostController) { // Não mais anulável
+fun MainScreenWithBottomNav(mainNavController: NavHostController) {
     val bottomNavController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val auth = FirebaseAuth.getInstance() // Instância do FirebaseAuth
+    val auth = FirebaseAuth.getInstance()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -92,7 +94,7 @@ fun MainScreenWithBottomNav(mainNavController: NavHostController) { // Não mais
                         onClick = {
                             scope.launch { drawerState.close() }
                             item.route?.let { route ->
-                                mainNavController.navigate(route) { // Usa mainNavController diretamente
+                                mainNavController.navigate(route) {
                                     popUpTo(mainNavController.graph.findStartDestination().id) {
                                         saveState = true
                                     }
@@ -103,16 +105,15 @@ fun MainScreenWithBottomNav(mainNavController: NavHostController) { // Não mais
                         }
                     )
                 }
-                // Adiciona o item de Sair separadamente para lidar com o logout
                 NavigationDrawerItem(
                     label = { Text("Sair") },
                     icon = { Icon(Icons.Default.ExitToApp, contentDescription = "Sair") },
                     selected = false,
                     onClick = {
                         scope.launch { drawerState.close() }
-                        auth.signOut() // Desloga do Firebase
-                        mainNavController.navigate("login") { // Navega para login
-                            popUpTo(mainNavController.graph.id) { // Limpa toda a pilha principal
+                        auth.signOut()
+                        mainNavController.navigate("login") {
+                            popUpTo(mainNavController.graph.id) {
                                 inclusive = true
                             }
                         }
@@ -135,7 +136,7 @@ fun MainScreenWithBottomNav(mainNavController: NavHostController) { // Não mais
             bottomBar = {
                 val items = listOf(
                     Screen.Home,
-                    Screen.Water,
+                    Screen.Water, // Incluir Water na lista
                     Screen.Diary,
                     Screen.Training,
                     Screen.Profile
@@ -187,10 +188,10 @@ fun MainScreenWithBottomNav(mainNavController: NavHostController) { // Não mais
                 modifier = Modifier.padding(innerPadding)
             ) {
                 composable(Screen.Home.route) { HomeScreen() }
-                composable(Screen.Water.route) { WaterScreen() }
+                composable(Screen.Water.route) { WaterScreen() } // Adicionada WaterScreen
                 composable(Screen.Diary.route) { DiaryScreen() }
                 composable(Screen.Training.route) { TrainingScreen() }
-                composable(Screen.Profile.route) { ProfileScreen(mainNavController = mainNavController) } // Passa mainNavController
+                composable(Screen.Profile.route) { ProfileScreen(mainNavController = mainNavController) }
             }
         }
     }
@@ -198,7 +199,7 @@ fun MainScreenWithBottomNav(mainNavController: NavHostController) { // Não mais
 
 sealed class Screen(val route: String, val icon: ImageVector) {
     object Home : Screen("home", Icons.Default.Home)
-    object Water : Screen("water", Icons.Default.LocalDrink)
+    object Water : Screen("water", Icons.Default.LocalDrink) // Ícone para água
     object Diary : Screen("diary", Icons.Default.MenuBook)
     object Training : Screen("training", Icons.Default.FitnessCenter)
     object Profile : Screen("profile", Icons.Default.Person)

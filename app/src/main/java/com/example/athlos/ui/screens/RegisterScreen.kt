@@ -1,4 +1,3 @@
-// RegisterScreen.kt
 package com.example.athlos.ui.screens
 
 import android.util.Log
@@ -15,30 +14,26 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel // Importa viewModel()
-import com.example.athlos.ui.viewmodels.RegisterViewModel // Importação CORRETA do seu ViewModel
-import com.example.athlos.ui.screens.defaultTextFieldColors // Assumindo que você moveu para CommonUiComposables.kt
-import com.example.athlos.ui.viewmodels.RegisterUiState // **ADICIONE ESTA IMPORTAÇÃO**
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.athlos.ui.viewmodels.RegisterViewModel
+import com.example.athlos.ui.screens.defaultTextFieldColors
+import com.example.athlos.ui.viewmodels.RegisterUiState
 import androidx.navigation.NavHostController
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     navController: NavHostController,
-    registerViewModel: RegisterViewModel = viewModel() // Injeção do ViewModel
+    registerViewModel: RegisterViewModel = viewModel()
 ) {
-    // **MUDANÇA AQUI:** Use collectAsState() para observar o StateFlow
     val uiState by registerViewModel.uiState.collectAsState()
 
-    // Este LaunchedEffect vai reagir quando o registroSucesso mudar para true
     LaunchedEffect(uiState.registroSucesso) {
         if (uiState.registroSucesso) {
             navController.navigate("main") {
                 popUpTo("register") { inclusive = true }
-                popUpTo("login") { inclusive = true } // Garante que a tela de login também seja removida, se presente
+                popUpTo("login") { inclusive = true }
             }
-            // Opcional: Resetar o estado de sucesso no ViewModel para evitar navegação duplicada
-            // Isso precisa de uma função em seu ViewModel: registerViewModel.resetRegistroSucesso()
         }
     }
 
@@ -48,7 +43,7 @@ fun RegisterScreen(
             .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
             .imePadding()
-            .verticalScroll(rememberScrollState()), // Permite rolagem
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -65,7 +60,6 @@ fun RegisterScreen(
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Para dataNascimento, ainda precisamos de um TextFieldValue local para gerenciar a seleção
         var dataNascimentoTextFieldValue by remember(uiState.dataNascimentoText) {
             mutableStateOf(TextFieldValue(text = uiState.dataNascimentoText, selection = TextRange(uiState.dataNascimentoText.length)))
         }
@@ -73,8 +67,8 @@ fun RegisterScreen(
         OutlinedTextField(
             value = dataNascimentoTextFieldValue,
             onValueChange = {
-                dataNascimentoTextFieldValue = it // Atualiza TextFieldValue local
-                registerViewModel.updateDataNascimento(it.text) // Envia o texto para o ViewModel
+                dataNascimentoTextFieldValue = it
+                registerViewModel.updateDataNascimento(it.text)
             },
             label = { Text("Data de nascimento (dd/mm/aaaa)") },
             singleLine = true,
@@ -105,7 +99,7 @@ fun RegisterScreen(
                 expanded = uiState.sexoExpanded,
                 onDismissRequest = { registerViewModel.dismissSexoDropdown() }
             ) {
-                val opcoesSexo = listOf("Masculino", "Feminino", "Outro") // Pode vir do ViewModel se for mais dinâmico
+                val opcoesSexo = listOf("Masculino", "Feminino", "Outro")
                 opcoesSexo.forEach { option ->
                     DropdownMenuItem(
                         text = { Text(option, color = MaterialTheme.colorScheme.onSurface) },

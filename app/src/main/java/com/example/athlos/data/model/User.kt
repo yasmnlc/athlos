@@ -1,11 +1,10 @@
 package com.example.athlos.data.model
 
-// Adicione @Parcelize se quiser passar este objeto entre componentes com o Bundle
-// import android.os.Parcelable
-// import kotlinx.parcelize.Parcelize
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
-// @Parcelize // Descomente se for usar Parcelable
 data class User(
+    val uid: String = "",
     val nome: String = "",
     val dataNascimento: String = "",
     val idade: String = "",
@@ -15,5 +14,8 @@ data class User(
     val email: String = "",
     val praticaExercicios: Boolean = false,
     val diasSemana: String = "",
-    val meta: String = "" // Adicionado o campo meta
-) // : Parcelable // Descomente se for usar Parcelable
+    val meta: String = "",
+    val aguaAtual: Int = 0,
+    val aguaMeta: Int = 2000,
+    val lastResetDate: String = LocalDate.MIN.format(DateTimeFormatter.ISO_LOCAL_DATE)
+)

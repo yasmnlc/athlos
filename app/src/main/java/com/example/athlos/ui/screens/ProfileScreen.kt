@@ -1,4 +1,3 @@
-// ProfileScreen.kt
 package com.example.athlos.ui.screens
 
 import androidx.compose.foundation.background
@@ -14,26 +13,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.athlos.data.model.User // Importa a data class User
-import androidx.lifecycle.viewmodel.compose.viewModel // Para ProfileViewModel
-
-// Importa o seu ProfileViewModel
+import com.example.athlos.data.model.User
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.athlos.ui.viewmodels.ProfileViewModel
-import com.example.athlos.ui.screens.defaultTextFieldColors // Assumindo que você moveu para CommonUiComposables.kt
+import com.example.athlos.ui.screens.defaultTextFieldColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    mainNavController: NavHostController, // Ainda recebe mainNavController para o logout
-    profileViewModel: ProfileViewModel = viewModel() // Injeta ProfileViewModel
+    mainNavController: NavHostController,
+    profileViewModel: ProfileViewModel = viewModel()
 ) {
-    // **MUDANÇA AQUI:** Use collectAsState() para observar o StateFlow
+
     val uiState by profileViewModel.uiState.collectAsState()
 
-    // Inicia o carregamento do perfil quando a tela é composta
-    // Se loadUserProfile já é chamado no init do ViewModel, este LaunchedEffect pode ser removido
-    // se você quiser que o carregamento aconteça apenas uma vez.
-    // Se o perfil pode ser "recarregado" em outros eventos, mantenha.
     LaunchedEffect(profileViewModel) {
         profileViewModel.loadUserProfile()
     }
@@ -51,7 +44,7 @@ fun ProfileScreen(
                 onSaveMeta = { profileViewModel.saveMeta() },
                 onLogout = {
                     profileViewModel.logoutUser()
-                    mainNavController.navigate("login") { // Navega no mainNavController
+                    mainNavController.navigate("login") {
                         popUpTo(mainNavController.graph.id) { inclusive = true }
                     }
                 }
@@ -64,14 +57,14 @@ fun ProfileScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class) // <-- Adicione esta anotação aqui
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileContent(
-    data: User, // Agora usando a data class User
+    data: User,
     meta: String,
     onMetaChange: (String) -> Unit,
-    onSaveMeta: () -> Unit, // Callback para salvar a meta
-    onLogout: () -> Unit // Callback para logout
+    onSaveMeta: () -> Unit,
+    onLogout: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -131,7 +124,7 @@ fun ProfileContent(
                         onValueChange = onMetaChange,
                         placeholder = { Text("Ex: ganhar massa") },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = defaultTextFieldColors() // <-- Esta chamada pode precisar de importação
+                        colors = defaultTextFieldColors()
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))

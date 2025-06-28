@@ -1,4 +1,3 @@
-// LoginScreen.kt
 package com.example.athlos.ui.screens
 
 import androidx.compose.foundation.background
@@ -84,9 +83,9 @@ fun LoginScreen(
         }
 
         Button(
-            onClick = { loginViewModel.loginUser() }, // Chama a função de login do ViewModel
+            onClick = { loginViewModel.loginUser() },
             modifier = Modifier.fillMaxWidth(),
-            enabled = !uiState.isLoading, // Desabilita o botão enquanto carrega
+            enabled = !uiState.isLoading,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary

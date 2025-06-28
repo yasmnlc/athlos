@@ -42,6 +42,7 @@ android {
 
 dependencies {
 
+    implementation ("androidx.compose.ui:ui-text:1.5.4")
     implementation ("androidx.navigation:navigation-compose:2.7.7")
     implementation ("androidx.activity:activity-compose:1.8.2")
     implementation ("androidx.compose.material:material-icons-extended:1.4.3")
@@ -61,6 +62,10 @@ dependencies {
     // Kotlin Coroutines para Play Services (para a extensão .await())
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
+    implementation (platform("androidx.compose:compose-bom:2024.03.00"))
+    implementation ("androidx.compose.ui:ui")
+    implementation ("androidx.compose.material3:material3")
+
 
 
     implementation(libs.androidx.core.ktx)
