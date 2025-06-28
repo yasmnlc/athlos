@@ -1,3 +1,4 @@
+// ProfileScreen.kt
 package com.example.athlos.ui.screens
 
 import androidx.compose.foundation.background
@@ -13,69 +14,65 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
+import com.example.athlos.data.model.User // Importa a data class User
+import androidx.lifecycle.viewmodel.compose.viewModel // Para ProfileViewModel
 
+// Importa o seu ProfileViewModel
+import com.example.athlos.ui.viewmodels.ProfileViewModel
+import com.example.athlos.ui.screens.defaultTextFieldColors // Assumindo que você moveu para CommonUiComposables.kt
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(mainNavController: NavHostController) { // Renomeado para mainNavController
-    val user = FirebaseAuth.getInstance().currentUser
-    val firestore = FirebaseFirestore.getInstance()
+fun ProfileScreen(
+    mainNavController: NavHostController, // Ainda recebe mainNavController para o logout
+    profileViewModel: ProfileViewModel = viewModel() // Injeta ProfileViewModel
+) {
+    // **MUDANÇA AQUI:** Use collectAsState() para observar o StateFlow
+    val uiState by profileViewModel.uiState.collectAsState()
 
-    var userData by remember { mutableStateOf<Map<String, Any>?>(null) }
-    var loading by remember { mutableStateOf(true) }
-    var meta by remember { mutableStateOf("") }
-
-    LaunchedEffect(user) {
-        user?.uid?.let { uid ->
-            firestore.collection("users").document(uid).get()
-                .addOnSuccessListener { document ->
-                    if (document.exists()) {
-                        userData = document.data
-                        // Tenta carregar a meta se ela existir
-                        meta = document.getString("meta") ?: ""
-                    }
-                    loading = false
-                }
-                .addOnFailureListener {
-                    loading = false
-                }
-        }
+    // Inicia o carregamento do perfil quando a tela é composta
+    // Se loadUserProfile já é chamado no init do ViewModel, este LaunchedEffect pode ser removido
+    // se você quiser que o carregamento aconteça apenas uma vez.
+    // Se o perfil pode ser "recarregado" em outros eventos, mantenha.
+    LaunchedEffect(profileViewModel) {
+        profileViewModel.loadUserProfile()
     }
 
-    if (loading) {
+    if (uiState.loading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
     } else {
-        userData?.let { data ->
-            ProfileContent(data, meta, onMetaChange = { meta = it }, mainNavController) // Passa mainNavController
+        uiState.userData?.let { data ->
+            ProfileContent(
+                data = data,
+                meta = uiState.meta,
+                onMetaChange = { profileViewModel.updateMeta(it) },
+                onSaveMeta = { profileViewModel.saveMeta() },
+                onLogout = {
+                    profileViewModel.logoutUser()
+                    mainNavController.navigate("login") { // Navega no mainNavController
+                        popUpTo(mainNavController.graph.id) { inclusive = true }
+                    }
+                }
+            )
         } ?: run {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Erro ao carregar dados.", color = MaterialTheme.colorScheme.error)
+                Text("Erro ao carregar dados do perfil: ${uiState.errorMessage ?: "Desconhecido"}", color = MaterialTheme.colorScheme.error)
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class) // <-- Adicione esta anotação aqui
 @Composable
 fun ProfileContent(
-    data: Map<String, Any>,
+    data: User, // Agora usando a data class User
     meta: String,
     onMetaChange: (String) -> Unit,
-    mainNavController: NavHostController // Renomeado para mainNavController
+    onSaveMeta: () -> Unit, // Callback para salvar a meta
+    onLogout: () -> Unit // Callback para logout
 ) {
-    val nome = data["nome"] as? String ?: ""
-    val idade = data["idade"] as? String ?: ""
-    val sexo = data["sexo"] as? String ?: ""
-    val peso = data["peso"] as? String ?: ""
-    val altura = data["altura"] as? String ?: ""
-
-    val user = FirebaseAuth.getInstance().currentUser
-    val firestore = FirebaseFirestore.getInstance()
-    val scope = rememberCoroutineScope()
-    var savingMeta by remember { mutableStateOf(false) } // Para mostrar um indicador de progresso ao salvar a meta
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -115,11 +112,11 @@ fun ProfileContent(
                 elevation = CardDefaults.cardElevation(4.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    ProfileInfo("Nome", nome)
-                    ProfileInfo("Idade", idade)
-                    ProfileInfo("Sexo", sexo)
-                    ProfileInfo("Peso", peso)
-                    ProfileInfo("Altura", altura)
+                    ProfileInfo("Nome", data.nome)
+                    ProfileInfo("Idade", data.idade)
+                    ProfileInfo("Sexo", data.sexo)
+                    ProfileInfo("Peso", data.peso)
+                    ProfileInfo("Altura", data.altura)
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -134,53 +131,27 @@ fun ProfileContent(
                         onValueChange = onMetaChange,
                         placeholder = { Text("Ex: ganhar massa") },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = defaultTextFieldColors()
+                        colors = defaultTextFieldColors() // <-- Esta chamada pode precisar de importação
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Button(
-                        onClick = {
-                            savingMeta = true
-                            user?.uid?.let { uid ->
-                                firestore.collection("users").document(uid)
-                                    .update("meta", meta) // Atualiza apenas o campo 'meta'
-                                    .addOnSuccessListener {
-                                        savingMeta = false
-                                        // Opcional: mostrar um Toast de sucesso
-                                    }
-                                    .addOnFailureListener {
-                                        savingMeta = false
-                                        // Opcional: mostrar um Toast de erro
-                                    }
-                            }
-                        },
+                        onClick = onSaveMeta,
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.medium,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary
-                        ),
-                        enabled = !savingMeta // Desabilita o botão enquanto salva
+                        )
                     ) {
-                        if (savingMeta) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
-                        } else {
-                            Text("Salvar Meta")
-                        }
+                        Text("Salvar Meta")
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Button(
-                        onClick = {
-                            FirebaseAuth.getInstance().signOut()
-                            mainNavController.navigate("login") { // Usa mainNavController
-                                popUpTo(mainNavController.graph.id) { // Limpa o back stack da navegação principal
-                                    inclusive = true
-                                }
-                            }
-                        },
+                        onClick = onLogout,
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.medium,
                         colors = ButtonDefaults.buttonColors(
@@ -211,16 +182,3 @@ fun ProfileInfo(label: String, value: String) {
         )
     }
 }
-
-@Composable
-private fun defaultTextFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-    cursorColor = MaterialTheme.colorScheme.primary,
-    focusedContainerColor = MaterialTheme.colorScheme.surface,
-    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-    focusedLabelColor = MaterialTheme.colorScheme.onSurface,
-    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface,
-    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-)

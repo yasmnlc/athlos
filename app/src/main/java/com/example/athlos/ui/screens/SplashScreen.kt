@@ -17,7 +17,7 @@ fun SplashScreen(navController: NavHostController) {
     val auth = FirebaseAuth.getInstance()
 
     LaunchedEffect(Unit) {
-        delay(2000)
+        delay(2000) // Delay de 2 segundos para exibir o splash
         if (auth.currentUser != null) {
             navController.navigate("main") {
                 popUpTo("splash") { inclusive = true }

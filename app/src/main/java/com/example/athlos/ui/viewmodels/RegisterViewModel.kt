@@ -1,25 +1,23 @@
 // RegisterViewModel.kt
-package com.example.athlos.ui.viewmodels // PACOTE CORRETO DA PASTA VIEWMODELS
+package com.example.athlos.ui.viewmodels // Pacote CORRETO para a pasta viewmodels
 
 import android.util.Log
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.athlos.data.repository.AuthRepository
+import com.example.athlos.data.repository.FirebaseAuthRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.flow.MutableStateFlow // <-- Importe este
+import kotlinx.coroutines.flow.StateFlow      // <-- Importe este
+import kotlinx.coroutines.flow.asStateFlow    // <-- Importe este
 import kotlinx.coroutines.launch
-import java.util.Calendar // Importe Calendar
-import com.google.android.gms.tasks.Task // Importe Task do GMS
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine // Importe suspendCoroutine
+import java.util.Calendar // Garanta que esta importação esteja presente
 
 // Data class para representar o estado da UI da tela de registro
 data class RegisterUiState(
     val nome: String = "",
-    val dataNascimentoText: String = "",
+    val dataNascimentoText: String = "", // Texto formatado da data de nascimento
     val idade: String = "",
     val sexo: String = "",
     val peso: String = "",
@@ -31,103 +29,107 @@ data class RegisterUiState(
     val sexoExpanded: Boolean = false,
     val erroMensagem: String? = null,
     val carregando: Boolean = false,
-    val registroSucesso: Boolean = false
+    val registroSucesso: Boolean = false // Novo estado para indicar sucesso no registro
 )
 
-class RegisterViewModel : ViewModel() {
+class RegisterViewModel(
+    private val authRepository: AuthRepository = FirebaseAuthRepository(FirebaseAuth.getInstance(), FirebaseFirestore.getInstance())
+) : ViewModel() {
 
-    // O estado da UI que será observado pelo Composable
-    var uiState by mutableStateOf(RegisterUiState())
-        private set
-
-    private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
-    private val firestore: FirebaseFirestore by lazy { FirebaseFirestore.getInstance() }
+    // **MUDANÇA AQUI:** Use MutableStateFlow e o exponha como StateFlow
+    private val _uiState = MutableStateFlow(RegisterUiState())
+    val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
 
     // Funções para atualizar o estado da UI
     fun updateNome(newNome: String) {
-        uiState = uiState.copy(nome = newNome)
+        // **MUDANÇA AQUI:** Atualizamos o valor do MutableStateFlow
+        _uiState.value = _uiState.value.copy(nome = newNome)
     }
 
     fun updateDataNascimento(newDateText: String) {
         val formatted = formatarData(newDateText)
         val calculatedAge = if (formatted.length == 10) calcularIdade(formatted) else ""
-        uiState = uiState.copy(dataNascimentoText = formatted, idade = calculatedAge)
+        // **MUDANÇA AQUI:**
+        _uiState.value = _uiState.value.copy(dataNascimentoText = formatted, idade = calculatedAge)
     }
 
     fun updateSexo(newSexo: String) {
-        uiState = uiState.copy(sexo = newSexo, sexoExpanded = false)
+        // **MUDANÇA AQUI:**
+        _uiState.value = _uiState.value.copy(sexo = newSexo, sexoExpanded = false)
     }
 
     fun toggleSexoDropdown() {
-        uiState = uiState.copy(sexoExpanded = !uiState.sexoExpanded)
+        // **MUDANÇA AQUI:**
+        _uiState.value = _uiState.value.copy(sexoExpanded = !_uiState.value.sexoExpanded)
     }
 
     fun dismissSexoDropdown() {
-        uiState = uiState.copy(sexoExpanded = false)
+        // **MUDANÇA AQUI:**
+        _uiState.value = _uiState.value.copy(sexoExpanded = false)
     }
 
     fun updatePeso(newPeso: String) {
-        uiState = uiState.copy(peso = newPeso)
+        // **MUDANÇA AQUI:**
+        _uiState.value = _uiState.value.copy(peso = newPeso)
     }
 
     fun updateAltura(newAltura: String) {
-        uiState = uiState.copy(altura = newAltura)
+        // **MUDANÇA AQUI:**
+        _uiState.value = _uiState.value.copy(altura = newAltura)
     }
 
     fun updateEmail(newEmail: String) {
-        uiState = uiState.copy(email = newEmail)
+        // **MUDANÇA AQUI:**
+        _uiState.value = _uiState.value.copy(email = newEmail)
     }
 
     fun updateSenha(newSenha: String) {
-        uiState = uiState.copy(senha = newSenha)
+        // **MUDANÇA AQUI:**
+        _uiState.value = _uiState.value.copy(senha = newSenha)
     }
 
     fun updatePraticaExercicios(newValue: Boolean) {
-        uiState = uiState.copy(praticaExercicios = newValue)
+        // **MUDANÇA AQUI:**
+        _uiState.value = _uiState.value.copy(praticaExercicios = newValue)
     }
 
     fun updateDiasSemana(newDias: String) {
-        uiState = uiState.copy(diasSemana = newDias)
+        // **MUDANÇA AQUI:**
+        _uiState.value = _uiState.value.copy(diasSemana = newDias)
     }
 
     // Lógica principal de registro
     fun registrarUsuario() {
         // Reinicia o estado de erro e carregamento
-        uiState = uiState.copy(carregando = true, erroMensagem = null, registroSucesso = false)
+        // **MUDANÇA AQUI:**
+        _uiState.value = _uiState.value.copy(carregando = true, erroMensagem = null, registroSucesso = false)
 
         viewModelScope.launch {
             try {
-                // 1. Criar usuário no Firebase Authentication
-                val authResult = auth.createUserWithEmailAndPassword(uiState.email, uiState.senha).await()
-                val uid = authResult.user?.uid
+                val userDataMap = mapOf(
+                    "nome" to _uiState.value.nome, // Acesso direto ao value
+                    "dataNascimento" to _uiState.value.dataNascimentoText,
+                    "idade" to _uiState.value.idade,
+                    "sexo" to _uiState.value.sexo,
+                    "peso" to _uiState.value.peso,
+                    "altura" to _uiState.value.altura,
+                    "email" to _uiState.value.email,
+                    "praticaExercicios" to _uiState.value.praticaExercicios,
+                    "diasSemana" to _uiState.value.diasSemana
+                )
 
-                if (uid != null) {
-                    // 2. Salvar dados adicionais no Firestore
-                    val userMap = mapOf(
-                        "nome" to uiState.nome,
-                        "dataNascimento" to uiState.dataNascimentoText,
-                        "idade" to uiState.idade,
-                        "sexo" to uiState.sexo,
-                        "peso" to uiState.peso,
-                        "altura" to uiState.altura,
-                        "email" to uiState.email,
-                        "praticaExercicios" to uiState.praticaExercicios,
-                        "diasSemana" to uiState.diasSemana
-                    )
+                // Usa o AuthRepository para o registro
+                authRepository.registerUser(_uiState.value.email, _uiState.value.senha, userDataMap)
 
-                    firestore.collection("users").document(uid).set(userMap).await()
+                // Registro e salvamento de dados bem-sucedidos
+                // **MUDANÇA AQUI:**
+                _uiState.value = _uiState.value.copy(carregando = false, registroSucesso = true)
+                Log.d("RegisterViewModel", "Usuário registrado e dados salvos com sucesso!")
 
-                    // Registro e salvamento de dados bem-sucedidos
-                    uiState = uiState.copy(carregando = false, registroSucesso = true)
-                    Log.d("RegisterViewModel", "Usuário registrado e dados salvos com sucesso!")
-
-                } else {
-                    uiState = uiState.copy(carregando = false, erroMensagem = "Erro: UID do usuário não encontrado após o cadastro.")
-                    Log.e("RegisterViewModel", "Erro: UID do usuário é nulo após createUserWithEmailAndPassword.")
-                }
             } catch (e: Exception) {
                 // Trata erros de autenticação ou Firestore
-                uiState = uiState.copy(carregando = false, erroMensagem = "Erro no cadastro: ${e.message}")
+                // **MUDANÇA AQUI:**
+                _uiState.value = _uiState.value.copy(carregando = false, erroMensagem = "Erro no cadastro: ${e.message}")
                 Log.e("RegisterViewModel", "Erro durante o registro: ${e.message}", e)
             }
         }
@@ -166,16 +168,4 @@ class RegisterViewModel : ViewModel() {
             }
         }
     }
-
-    // Função de extensão para converter Task em suspend function (Coroutines)
-    // Coloque esta função aqui dentro do RegisterViewModel.kt
-    private suspend fun <T> Task<T>.await(): T =
-        suspendCoroutine { continuation ->
-            addOnSuccessListener { result ->
-                continuation.resume(result)
-            }
-            addOnFailureListener { exception ->
-                continuation.resumeWithException(exception)
-            }
-        }
 }

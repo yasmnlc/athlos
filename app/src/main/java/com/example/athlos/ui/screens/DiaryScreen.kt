@@ -73,7 +73,6 @@ fun DiaryScreen() {
             )
         }
 
-
         MealSection(title = "CAFÉ")
         MealSection(title = "ALMOÇO")
         MealSection(title = "JANTAR")
@@ -163,20 +162,6 @@ fun ProgressRing(progress: Int, progressColor: Color, strokeWidth: Dp) {
         )
     }
 }
-
-
-@Composable
-private fun defaultTextFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-    cursorColor = MaterialTheme.colorScheme.primary,
-    focusedContainerColor = MaterialTheme.colorScheme.surface,
-    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-    focusedLabelColor = MaterialTheme.colorScheme.onSurface,
-    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface,
-    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-)
 
 @Preview(showBackground = true)
 @Composable

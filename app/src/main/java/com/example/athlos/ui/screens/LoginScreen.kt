@@ -1,3 +1,4 @@
+// LoginScreen.kt
 package com.example.athlos.ui.screens
 
 import androidx.compose.foundation.background
@@ -10,133 +11,106 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.google.firebase.auth.FirebaseAuth
-
-@OptIn(ExperimentalMaterial3Api::class) // Anotação necessária para OutlinedTextFieldDefaults.colors
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.athlos.ui.viewmodels.LoginViewModel
+import com.example.athlos.ui.screens.defaultTextFieldColors
+import com.example.athlos.ui.viewmodels.LoginUiState
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(navController: NavHostController) {
-    val auth = FirebaseAuth.getInstance()
+fun LoginScreen(
+    navController: NavHostController,
+    loginViewModel: LoginViewModel = viewModel()
+) {
+    val uiState by loginViewModel.uiState.collectAsState()
 
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var erro by remember { mutableStateOf<String?>(null) }
-    var carregando by remember { mutableStateOf(false) }
+
+    LaunchedEffect(uiState.loginSuccess) {
+        if (uiState.loginSuccess) {
+            navController.navigate("main") {
+                popUpTo("login") { inclusive = true }
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 24.dp) // Adicionado padding horizontal para melhor visual
-            .imePadding(), // Garante que o conteúdo role para cima com o teclado virtual
+            .padding(horizontal = 24.dp)
+            .imePadding(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text(
             "Bem-vindo de volta!",
-            fontSize = 28.sp, // Tamanho um pouco maior para o título
+            fontSize = 28.sp,
             color = MaterialTheme.colorScheme.onBackground,
-            style = MaterialTheme.typography.headlineLarge // Usa a tipografia do tema
+            style = MaterialTheme.typography.headlineLarge
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
         OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
+            value = uiState.email,
+            onValueChange = { loginViewModel.updateEmail(it) },
             label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth(), // Adicionado fillMaxWidth
+            modifier = Modifier.fillMaxWidth(),
             colors = defaultTextFieldColors(),
-            singleLine = true // Adicionado para melhor UX
+            singleLine = true
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
+            value = uiState.password,
+            onValueChange = { loginViewModel.updatePassword(it) },
             label = { Text("Senha") },
             visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth(), // Adicionado fillMaxWidth
+            modifier = Modifier.fillMaxWidth(),
             colors = defaultTextFieldColors(),
-            singleLine = true // Adicionado para melhor UX
+            singleLine = true
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Exibe o erro se houver
-        erro?.let {
+        uiState.errorMessage?.let {
             Text(
                 it,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.bodySmall // Usa uma tipografia menor para erros
+                style = MaterialTheme.typography.bodySmall
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
 
         Button(
-            onClick = {
-                erro = null // Limpa o erro anterior ao tentar novo login
-                carregando = true
-
-                auth.signInWithEmailAndPassword(email, password)
-                    .addOnSuccessListener {
-                        carregando = false
-                        navController.navigate("main") {
-                            popUpTo("login") { inclusive = true } // Remove a tela de login da pilha
-                        }
-                    }
-                    .addOnFailureListener { exception ->
-                        // Mensagens de erro mais amigáveis
-                        erro = when (exception) {
-                            is com.google.firebase.auth.FirebaseAuthInvalidUserException -> "Usuário não encontrado. Verifique seu email."
-                            is com.google.firebase.auth.FirebaseAuthInvalidCredentialsException -> "Senha incorreta. Tente novamente."
-                            else -> "Erro no login: ${exception.message}"
-                        }
-                        carregando = false
-                    }
-            },
-            modifier = Modifier.fillMaxWidth(), // Adicionado fillMaxWidth
-            enabled = !carregando, // Desabilita o botão enquanto carrega
+            onClick = { loginViewModel.loginUser() }, // Chama a função de login do ViewModel
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !uiState.isLoading, // Desabilita o botão enquanto carrega
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ),
-            shape = MaterialTheme.shapes.medium // Aplica o shape padrão
+            shape = MaterialTheme.shapes.medium
         ) {
-            if (carregando) {
+            if (uiState.isLoading) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp), // Tamanho menor para o indicador
+                    modifier = Modifier.size(24.dp),
                     color = MaterialTheme.colorScheme.onPrimary,
-                    strokeWidth = 2.dp // Espessura menor
+                    strokeWidth = 2.dp
                 )
             } else {
                 Text("Entrar")
             }
         }
 
-
-        Spacer(modifier = Modifier.height(16.dp)) // Aumentado o espaçamento
+        Spacer(modifier = Modifier.height(16.dp))
 
         TextButton(
             onClick = { navController.navigate("register") },
-            modifier = Modifier.fillMaxWidth() // Adicionado fillMaxWidth para o TextButton
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Não tem uma conta? Cadastre-se aqui.", color = MaterialTheme.colorScheme.primary)
+            Text("Não tem uma conta? Cadastre-se aqui.")
         }
     }
 }
-
-@OptIn(ExperimentalMaterial3Api::class) // Anotação necessária para OutlinedTextFieldDefaults.colors
-@Composable
-private fun defaultTextFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-    cursorColor = MaterialTheme.colorScheme.primary,
-    focusedContainerColor = MaterialTheme.colorScheme.surface,
-    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-    focusedLabelColor = MaterialTheme.colorScheme.onSurface,
-    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface,
-    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-)

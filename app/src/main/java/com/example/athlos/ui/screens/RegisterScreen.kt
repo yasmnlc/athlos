@@ -1,3 +1,4 @@
+// RegisterScreen.kt
 package com.example.athlos.ui.screens
 
 import android.util.Log
@@ -14,62 +15,30 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel // Importa viewModel()
+import com.example.athlos.ui.viewmodels.RegisterViewModel // Importação CORRETA do seu ViewModel
+import com.example.athlos.ui.screens.defaultTextFieldColors // Assumindo que você moveu para CommonUiComposables.kt
+import com.example.athlos.ui.viewmodels.RegisterUiState // **ADICIONE ESTA IMPORTAÇÃO**
 import androidx.navigation.NavHostController
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import java.util.Calendar // Importe Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RegisterScreen(navController: NavHostController) {
-    val auth = FirebaseAuth.getInstance()
-    val firestore = FirebaseFirestore.getInstance()
+fun RegisterScreen(
+    navController: NavHostController,
+    registerViewModel: RegisterViewModel = viewModel() // Injeção do ViewModel
+) {
+    // **MUDANÇA AQUI:** Use collectAsState() para observar o StateFlow
+    val uiState by registerViewModel.uiState.collectAsState()
 
-    var nome by remember { mutableStateOf("") }
-    var dataNascimentoState by remember { mutableStateOf(TextFieldValue("")) }
-    var idade by remember { mutableStateOf("") }
-    var sexo by remember { mutableStateOf("") }
-    var peso by remember { mutableStateOf("") }
-    var altura by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var senha by remember { mutableStateOf("") }
-    var praticaExercicios by remember { mutableStateOf(false) }
-    var diasSemana by remember { mutableStateOf("") }
-    var sexoExpanded by remember { mutableStateOf(false) }
-    val opcoesSexo = listOf("Masculino", "Feminino", "Outro")
-    var erro by remember { mutableStateOf<String?>(null) }
-    var carregando by remember { mutableStateOf(false) }
-
-    fun calcularIdade(data: String): String {
-        return try {
-            val partes = data.split("/")
-            val dia = partes[0].toInt()
-            val mes = partes[1].toInt()
-            val ano = partes[2].toInt()
-
-            val dataNascimento = Calendar.getInstance().apply {
-                set(ano, mes - 1, dia) // Mês é 0-indexed
+    // Este LaunchedEffect vai reagir quando o registroSucesso mudar para true
+    LaunchedEffect(uiState.registroSucesso) {
+        if (uiState.registroSucesso) {
+            navController.navigate("main") {
+                popUpTo("register") { inclusive = true }
+                popUpTo("login") { inclusive = true } // Garante que a tela de login também seja removida, se presente
             }
-            val dataAtual = Calendar.getInstance()
-
-            var idadeCalculada = dataAtual.get(Calendar.YEAR) - dataNascimento.get(Calendar.YEAR)
-            if (dataAtual.get(Calendar.DAY_OF_YEAR) < dataNascimento.get(Calendar.DAY_OF_YEAR)) {
-                idadeCalculada--
-            }
-            "$idadeCalculada anos"
-        } catch (e: Exception) {
-            Log.e("RegisterScreen", "Erro ao calcular idade: ${e.message}")
-            ""
-        }
-    }
-
-    fun formatarData(input: String): String {
-        val numbers = input.filter { it.isDigit() }.take(8)
-        return buildString {
-            for (i in numbers.indices) {
-                append(numbers[i])
-                if ((i == 1 || i == 3) && i != numbers.lastIndex) append('/')
-            }
+            // Opcional: Resetar o estado de sucesso no ViewModel para evitar navegação duplicada
+            // Isso precisa de uma função em seu ViewModel: registerViewModel.resetRegistroSucesso()
         }
     }
 
@@ -78,8 +47,8 @@ fun RegisterScreen(navController: NavHostController) {
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
-            .imePadding() // Adiciona padding para o teclado virtual
-            .verticalScroll(rememberScrollState()), // Adicionado para permitir scroll em telas menores
+            .imePadding()
+            .verticalScroll(rememberScrollState()), // Permite rolagem
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -88,51 +57,59 @@ fun RegisterScreen(navController: NavHostController) {
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
-            value = nome,
-            onValueChange = { nome = it },
+            value = uiState.nome,
+            onValueChange = { registerViewModel.updateNome(it) },
             label = { Text("Nome") },
-            modifier = Modifier.fillMaxWidth(), // Adicionado fillMaxWidth
+            modifier = Modifier.fillMaxWidth(),
             colors = defaultTextFieldColors()
         )
-        Spacer(modifier = Modifier.height(8.dp)) // Espaçamento entre campos
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Para dataNascimento, ainda precisamos de um TextFieldValue local para gerenciar a seleção
+        var dataNascimentoTextFieldValue by remember(uiState.dataNascimentoText) {
+            mutableStateOf(TextFieldValue(text = uiState.dataNascimentoText, selection = TextRange(uiState.dataNascimentoText.length)))
+        }
 
         OutlinedTextField(
-            value = dataNascimentoState,
+            value = dataNascimentoTextFieldValue,
             onValueChange = {
-                val formatted = formatarData(it.text)
-                dataNascimentoState = TextFieldValue(text = formatted, selection = TextRange(formatted.length))
-                if (formatted.length == 10) idade = calcularIdade(formatted)
+                dataNascimentoTextFieldValue = it // Atualiza TextFieldValue local
+                registerViewModel.updateDataNascimento(it.text) // Envia o texto para o ViewModel
             },
             label = { Text("Data de nascimento (dd/mm/aaaa)") },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(), // Adicionado fillMaxWidth
+            modifier = Modifier.fillMaxWidth(),
             colors = defaultTextFieldColors()
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        if (idade.isNotBlank()) Text("Idade: $idade", color = MaterialTheme.colorScheme.onBackground)
+        if (uiState.idade.isNotBlank()) Text("Idade: ${uiState.idade}", color = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(8.dp))
 
-        ExposedDropdownMenuBox(expanded = sexoExpanded, onExpandedChange = { sexoExpanded = !sexoExpanded }) {
+        ExposedDropdownMenuBox(
+            expanded = uiState.sexoExpanded,
+            onExpandedChange = { registerViewModel.toggleSexoDropdown() }
+        ) {
             OutlinedTextField(
-                value = sexo,
+                value = uiState.sexo,
                 onValueChange = {},
                 readOnly = true,
                 label = { Text("Sexo") },
                 placeholder = { Text("Sexo") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = sexoExpanded) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = uiState.sexoExpanded) },
                 modifier = Modifier.menuAnchor().fillMaxWidth(),
                 colors = defaultTextFieldColors()
             )
 
-            ExposedDropdownMenu(expanded = sexoExpanded, onDismissRequest = { sexoExpanded = false }) {
+            ExposedDropdownMenu(
+                expanded = uiState.sexoExpanded,
+                onDismissRequest = { registerViewModel.dismissSexoDropdown() }
+            ) {
+                val opcoesSexo = listOf("Masculino", "Feminino", "Outro") // Pode vir do ViewModel se for mais dinâmico
                 opcoesSexo.forEach { option ->
                     DropdownMenuItem(
                         text = { Text(option, color = MaterialTheme.colorScheme.onSurface) },
-                        onClick = {
-                            sexo = option
-                            sexoExpanded = false
-                        }
+                        onClick = { registerViewModel.updateSexo(option) }
                     )
                 }
             }
@@ -140,57 +117,60 @@ fun RegisterScreen(navController: NavHostController) {
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
-            value = peso,
-            onValueChange = { peso = it },
+            value = uiState.peso,
+            onValueChange = { registerViewModel.updatePeso(it) },
             label = { Text("Peso") },
-            modifier = Modifier.fillMaxWidth(), // Adicionado fillMaxWidth
+            modifier = Modifier.fillMaxWidth(),
             colors = defaultTextFieldColors()
         )
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
-            value = altura,
-            onValueChange = { altura = it },
+            value = uiState.altura,
+            onValueChange = { registerViewModel.updateAltura(it) },
             label = { Text("Altura") },
-            modifier = Modifier.fillMaxWidth(), // Adicionado fillMaxWidth
+            modifier = Modifier.fillMaxWidth(),
             colors = defaultTextFieldColors()
         )
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
+            value = uiState.email,
+            onValueChange = { registerViewModel.updateEmail(it) },
             label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth(), // Adicionado fillMaxWidth
+            modifier = Modifier.fillMaxWidth(),
             colors = defaultTextFieldColors()
         )
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
-            value = senha,
-            onValueChange = { senha = it },
+            value = uiState.senha,
+            onValueChange = { registerViewModel.updateSenha(it) },
             label = { Text("Senha") },
             visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth(), // Adicionado fillMaxWidth
+            modifier = Modifier.fillMaxWidth(),
             colors = defaultTextFieldColors()
         )
         Spacer(modifier = Modifier.height(8.dp))
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth() // Adicionado fillMaxWidth para a Row do Checkbox
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Checkbox(checked = praticaExercicios, onCheckedChange = { praticaExercicios = it })
+            Checkbox(
+                checked = uiState.praticaExercicios,
+                onCheckedChange = { registerViewModel.updatePraticaExercicios(it) }
+            )
             Text("Pratica exercícios?", color = MaterialTheme.colorScheme.onSurface)
         }
         Spacer(modifier = Modifier.height(8.dp))
 
-        if (praticaExercicios) {
+        if (uiState.praticaExercicios) {
             OutlinedTextField(
-                value = diasSemana,
-                onValueChange = { diasSemana = it },
+                value = uiState.diasSemana,
+                onValueChange = { registerViewModel.updateDiasSemana(it) },
                 label = { Text("Quantos dias por semana?") },
-                modifier = Modifier.fillMaxWidth(), // Adicionado fillMaxWidth
+                modifier = Modifier.fillMaxWidth(),
                 colors = defaultTextFieldColors()
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -198,73 +178,27 @@ fun RegisterScreen(navController: NavHostController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        erro?.let {
+        uiState.erroMensagem?.let {
             Text(
                 it,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.bodySmall // Usa uma tipografia menor para erros
+                style = MaterialTheme.typography.bodySmall
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
 
         Button(
-            onClick = {
-                carregando = true
-                erro = null
-
-                auth.createUserWithEmailAndPassword(email, senha)
-                    .addOnSuccessListener { result ->
-                        result.user?.uid?.let { uid ->
-                            val userMap = mapOf(
-                                "nome" to nome,
-                                "dataNascimento" to dataNascimentoState.text,
-                                "idade" to idade,
-                                "sexo" to sexo,
-                                "peso" to peso,
-                                "altura" to altura,
-                                "email" to email,
-                                "praticaExercicios" to praticaExercicios,
-                                "diasSemana" to diasSemana
-                                // Adicione outros campos que você quiser salvar no Firestore aqui
-                            )
-
-                            firestore.collection("users").document(uid)
-                                .set(userMap)
-                                .addOnSuccessListener {
-                                    carregando = false // DESATIVA O INDICADOR DE CARREGAMENTO AQUI!
-                                    // A navegação só deve ocorrer após o Firebase e o Firestore estarem ok
-                                    navController.navigate("main") {
-                                        popUpTo("register") { inclusive = true }
-                                        popUpTo("login") { inclusive = true } // Garante que a tela de login também seja removida, se presente
-                                    }
-                                }
-                                .addOnFailureListener { firestoreError ->
-                                    erro = "Erro ao salvar dados do usuário: ${firestoreError.message}"
-                                    carregando = false // DESATIVA O INDICADOR TAMBÉM SE HOUVER ERRO NO FIRESTORE!
-                                    Log.e("RegisterScreen", "Erro Firestore: ${firestoreError.message}", firestoreError)
-                                }
-                        } ?: run {
-                            erro = "Erro: UID do usuário não encontrado após o cadastro."
-                            carregando = false // DESATIVA SE O UID NÃO FOR ENCONTRADO
-                            Log.e("RegisterScreen", "Erro: UID do usuário é nulo após createUserWithEmailAndPassword.")
-                        }
-                    }
-                    .addOnFailureListener { authError ->
-                        erro = "Erro no cadastro: ${authError.message}"
-                        carregando = false // DESATIVA O INDICADOR EM CASO DE FALHA NA AUTENTICAÇÃO!
-                        Log.e("RegisterScreen", "Erro Auth: ${authError.message}", authError)
-                    }
-            },
-            modifier = Modifier.fillMaxWidth(), // Adicionado fillMaxWidth
-            enabled = !carregando, // Desabilita o botão durante o carregamento
+            onClick = { registerViewModel.registrarUsuario() },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !uiState.carregando,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ),
             shape = MaterialTheme.shapes.medium
         ) {
-            if (carregando) {
+            if (uiState.carregando) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(24.dp),
                     color = MaterialTheme.colorScheme.onPrimary,
@@ -276,17 +210,3 @@ fun RegisterScreen(navController: NavHostController) {
         }
     }
 }
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun defaultTextFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-    cursorColor = MaterialTheme.colorScheme.primary,
-    focusedContainerColor = MaterialTheme.colorScheme.surface,
-    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-    focusedLabelColor = MaterialTheme.colorScheme.onSurface,
-    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface,
-    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-)
