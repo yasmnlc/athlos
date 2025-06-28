@@ -16,12 +16,15 @@ class NotificationReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context?, intent: Intent?) {
         context?.let {
+            val title = intent?.getStringExtra("notification_title") ?: "Sua Notificação Athlos"
+            val message = intent?.getStringExtra("notification_message") ?: "Este é um lembrete do aplicativo Athlos!"
+
             createNotificationChannel(it)
 
             val builder = NotificationCompat.Builder(it, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle("Sua Notificação Athlos")
-                .setContentText("Este é um lembrete do aplicativo Athlos!")
+                .setContentTitle(title)
+                .setContentText(message)
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setAutoCancel(true)
 

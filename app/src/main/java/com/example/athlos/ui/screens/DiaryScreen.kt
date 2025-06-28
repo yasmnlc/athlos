@@ -36,7 +36,6 @@ fun DiaryScreen() {
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // TextView tv_total_kcal_label
         Text(
             text = "1200 kcal",
             fontSize = 24.sp,
@@ -182,7 +181,7 @@ private fun defaultTextFieldColors() = OutlinedTextFieldDefaults.colors(
 @Preview(showBackground = true)
 @Composable
 fun PreviewDiaryScreen() {
-    AthlosTheme {
+    AthlosTheme(darkTheme = false) {
         DiaryScreen()
     }
 }

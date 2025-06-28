@@ -15,16 +15,34 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
-import com.example.athlos.ui.screens.*
+import com.example.athlos.ui.screens.* // Importa as telas
+import com.example.athlos.ui.screens.DARK_MODE_KEY
+import com.example.athlos.ui.screens.dataStore
 import com.example.athlos.ui.theme.AthlosTheme
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import android.util.Log
+import com.google.firebase.FirebaseApp
+import com.google.firebase.auth.FirebaseAuth // Importa FirebaseAuth
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        FirebaseApp.initializeApp(this)
         setContent {
-            AthlosTheme {
-                AthlosApp()
+            val darkModeEnabled by this.dataStore.data.map { preferences ->
+                preferences[DARK_MODE_KEY] ?: false
+            }.collectAsState(initial = false)
+
+            Log.d("AthlosApp", "Modo Escuro Ativado (MainActivity): $darkModeEnabled")
+
+            AthlosTheme(darkTheme = darkModeEnabled) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    AthlosApp()
+                }
             }
         }
     }
@@ -37,28 +55,29 @@ fun AthlosApp() {
     NavHost(navController = mainNavController, startDestination = "splash") {
         composable("splash") { SplashScreen(mainNavController) }
         composable("login") { LoginScreen(mainNavController) }
-        composable("register") { RegisterScreen(mainNavController) }
+        composable("register") { RegisterScreen(mainNavController) } // Passa mainNavController
         composable("main") {
-            MainScreenWithBottomNav(mainNavController)
+            MainScreenWithBottomNav(mainNavController) // Passa mainNavController
         }
+        composable("settings") { SettingsScreen() }
     }
 }
 
-data class DrawerItem(val label: String, val icon: ImageVector)
+data class DrawerItem(val label: String, val icon: ImageVector, val route: String? = null)
 
 val drawerItems = listOf(
     DrawerItem("Dúvidas frequentes", Icons.Default.Help),
-    DrawerItem("Configurações", Icons.Default.Settings),
+    DrawerItem("Configurações", Icons.Default.Settings, "settings"),
     DrawerItem("Fale Conosco", Icons.Default.Email),
-    DrawerItem("Sair", Icons.Default.ExitToApp)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreenWithBottomNav(mainNavController: NavHostController? = null) {
+fun MainScreenWithBottomNav(mainNavController: NavHostController) { // Não mais anulável
     val bottomNavController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val auth = FirebaseAuth.getInstance() // Instância do FirebaseAuth
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -71,10 +90,34 @@ fun MainScreenWithBottomNav(mainNavController: NavHostController? = null) {
                         icon = { Icon(item.icon, contentDescription = item.label) },
                         selected = false,
                         onClick = {
-                            // TODO
+                            scope.launch { drawerState.close() }
+                            item.route?.let { route ->
+                                mainNavController.navigate(route) { // Usa mainNavController diretamente
+                                    popUpTo(mainNavController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
                         }
                     )
                 }
+                // Adiciona o item de Sair separadamente para lidar com o logout
+                NavigationDrawerItem(
+                    label = { Text("Sair") },
+                    icon = { Icon(Icons.Default.ExitToApp, contentDescription = "Sair") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        auth.signOut() // Desloga do Firebase
+                        mainNavController.navigate("login") { // Navega para login
+                            popUpTo(mainNavController.graph.id) { // Limpa toda a pilha principal
+                                inclusive = true
+                            }
+                        }
+                    }
+                )
             }
         }
     ) {
@@ -147,7 +190,7 @@ fun MainScreenWithBottomNav(mainNavController: NavHostController? = null) {
                 composable(Screen.Water.route) { WaterScreen() }
                 composable(Screen.Diary.route) { DiaryScreen() }
                 composable(Screen.Training.route) { TrainingScreen() }
-                composable(Screen.Profile.route) { ProfileScreen() }
+                composable(Screen.Profile.route) { ProfileScreen(mainNavController = mainNavController) } // Passa mainNavController
             }
         }
     }

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "532262747843",
+    "project_id": "athlos-app2025",
+    "storage_bucket": "athlos-app2025.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:532262747843:android:1212eab27d8344a9df6c76",
+        "android_client_info": {
+          "package_name": "com.example.athlos"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBewNZAu_c-4KFqMRyULdDtyyfdjX8E3e4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -12,15 +12,69 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+
 
 @Composable
-fun ProfileScreen() {
-    val nome = "Yasmin Costa"
-    val idade = "22 anos"
-    val sexo = "Feminino"
-    val peso = "85 kg"
-    val altura = "1,66 m"
+fun ProfileScreen(mainNavController: NavHostController) { // Renomeado para mainNavController
+    val user = FirebaseAuth.getInstance().currentUser
+    val firestore = FirebaseFirestore.getInstance()
+
+    var userData by remember { mutableStateOf<Map<String, Any>?>(null) }
+    var loading by remember { mutableStateOf(true) }
     var meta by remember { mutableStateOf("") }
+
+    LaunchedEffect(user) {
+        user?.uid?.let { uid ->
+            firestore.collection("users").document(uid).get()
+                .addOnSuccessListener { document ->
+                    if (document.exists()) {
+                        userData = document.data
+                        // Tenta carregar a meta se ela existir
+                        meta = document.getString("meta") ?: ""
+                    }
+                    loading = false
+                }
+                .addOnFailureListener {
+                    loading = false
+                }
+        }
+    }
+
+    if (loading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+    } else {
+        userData?.let { data ->
+            ProfileContent(data, meta, onMetaChange = { meta = it }, mainNavController) // Passa mainNavController
+        } ?: run {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Erro ao carregar dados.", color = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+}
+
+@Composable
+fun ProfileContent(
+    data: Map<String, Any>,
+    meta: String,
+    onMetaChange: (String) -> Unit,
+    mainNavController: NavHostController // Renomeado para mainNavController
+) {
+    val nome = data["nome"] as? String ?: ""
+    val idade = data["idade"] as? String ?: ""
+    val sexo = data["sexo"] as? String ?: ""
+    val peso = data["peso"] as? String ?: ""
+    val altura = data["altura"] as? String ?: ""
+
+    val user = FirebaseAuth.getInstance().currentUser
+    val firestore = FirebaseFirestore.getInstance()
+    val scope = rememberCoroutineScope()
+    var savingMeta by remember { mutableStateOf(false) } // Para mostrar um indicador de progresso ao salvar a meta
 
     Box(
         modifier = Modifier
@@ -61,11 +115,11 @@ fun ProfileScreen() {
                 elevation = CardDefaults.cardElevation(4.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    ProfileInfo(label = "Nome", value = nome)
-                    ProfileInfo(label = "Idade", value = idade)
-                    ProfileInfo(label = "Sexo", value = sexo)
-                    ProfileInfo(label = "Peso", value = peso)
-                    ProfileInfo(label = "Altura", value = altura)
+                    ProfileInfo("Nome", nome)
+                    ProfileInfo("Idade", idade)
+                    ProfileInfo("Sexo", sexo)
+                    ProfileInfo("Peso", peso)
+                    ProfileInfo("Altura", altura)
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -77,7 +131,7 @@ fun ProfileScreen() {
 
                     OutlinedTextField(
                         value = meta,
-                        onValueChange = { meta = it },
+                        onValueChange = onMetaChange,
                         placeholder = { Text("Ex: ganhar massa") },
                         modifier = Modifier.fillMaxWidth(),
                         colors = defaultTextFieldColors()
@@ -86,15 +140,55 @@ fun ProfileScreen() {
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Button(
-                        onClick = { /* Salvar meta */ },
+                        onClick = {
+                            savingMeta = true
+                            user?.uid?.let { uid ->
+                                firestore.collection("users").document(uid)
+                                    .update("meta", meta) // Atualiza apenas o campo 'meta'
+                                    .addOnSuccessListener {
+                                        savingMeta = false
+                                        // Opcional: mostrar um Toast de sucesso
+                                    }
+                                    .addOnFailureListener {
+                                        savingMeta = false
+                                        // Opcional: mostrar um Toast de erro
+                                    }
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.medium,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        enabled = !savingMeta // Desabilita o botão enquanto salva
+                    ) {
+                        if (savingMeta) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                        } else {
+                            Text("Salvar Meta")
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Button(
+                        onClick = {
+                            FirebaseAuth.getInstance().signOut()
+                            mainNavController.navigate("login") { // Usa mainNavController
+                                popUpTo(mainNavController.graph.id) { // Limpa o back stack da navegação principal
+                                    inclusive = true
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError
                         )
                     ) {
-                        Text("Salvar Meta")
+                        Text("Sair")
                     }
                 }
             }
