@@ -17,5 +17,6 @@ data class User(
     val meta: String = "",
     val aguaAtual: Int = 0,
     val aguaMeta: Int = 2000,
-    val lastResetDate: String = LocalDate.MIN.format(DateTimeFormatter.ISO_LOCAL_DATE)
+    val lastResetDate: String = LocalDate.MIN.format(DateTimeFormatter.ISO_LOCAL_DATE),
+    val profileImageUrl: String? = null
 )

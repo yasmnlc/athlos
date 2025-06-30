@@ -1,21 +1,32 @@
 package com.example.athlos.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.example.athlos.data.model.User
-import com.example.athlos.ui.viewmodels.ProfileViewModel
+import com.example.athlos.viewmodel.ProfileViewModel
+import android.util.Log
+import com.example.athlos.ui.screens.defaultTextFieldColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,18 +40,29 @@ fun ProfileScreen(
         profileViewModel.loadUserProfile()
     }
 
+    LaunchedEffect(uiState.errorMessage) {
+        if (uiState.errorMessage != null) {
+            Log.e("ProfileScreen", "Erro: ${uiState.errorMessage}")
+        }
+    }
+
     if (uiState.loading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
     } else {
-        // Se houver dados do usuário, exibe o conteúdo do perfil
         uiState.userData?.let { data ->
             ProfileContent(
                 data = data,
                 meta = uiState.meta,
+                isEditingMeta = uiState.isEditingMeta,
+                isSavingMeta = uiState.isSavingMeta,
+                isUploadingPhoto = uiState.isUploadingPhoto,
+                profileImageUrl = uiState.profileImageUrl,
                 onMetaChange = { profileViewModel.updateMeta(it) },
+                onToggleEditMeta = { profileViewModel.toggleEditMeta(it) },
                 onSaveMeta = { profileViewModel.saveMeta() },
+                onUploadPhoto = { uri -> profileViewModel.uploadProfileImage(uri) }, // Passa o Uri
                 onLogout = {
                     profileViewModel.logoutUser()
                     mainNavController.navigate("login") {
@@ -49,7 +71,6 @@ fun ProfileScreen(
                 }
             )
         } ?: run {
-
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
                     "Erro ao carregar dados do perfil: ${uiState.errorMessage ?: "Desconhecido"}",
@@ -65,10 +86,22 @@ fun ProfileScreen(
 fun ProfileContent(
     data: User,
     meta: String,
+    isEditingMeta: Boolean,
+    isSavingMeta: Boolean,
+    isUploadingPhoto: Boolean,
+    profileImageUrl: String?,
     onMetaChange: (String) -> Unit,
+    onToggleEditMeta: (Boolean) -> Unit,
     onSaveMeta: () -> Unit,
+    onUploadPhoto: (Uri) -> Unit,
     onLogout: () -> Unit
 ) {
+    val pickImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { onUploadPhoto(it) }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -81,23 +114,59 @@ fun ProfileContent(
                 .align(Alignment.TopCenter),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                imageVector = Icons.Default.Person,
-                contentDescription = "Avatar",
+            // Foto de Perfil
+            Box(
                 modifier = Modifier
-                    .size(80.dp)
+                    .size(100.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-                    .padding(16.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
+                    .clickable(enabled = !isUploadingPhoto) { pickImageLauncher.launch("image/*") },
+                contentAlignment = Alignment.Center
+            ) {
+                if (profileImageUrl != null && profileImageUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = profileImageUrl,
+                        contentDescription = "Foto de Perfil",
+                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Avatar padrão",
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                if (isUploadingPhoto) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(40.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.CameraAlt,
+                        contentDescription = "Alterar foto",
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .offset(x = 4.dp, y = 4.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                            .size(32.dp)
+                            .padding(4.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 "Seu Perfil",
-                fontSize = 24.sp,
-                color = MaterialTheme.colorScheme.onBackground
+                fontSize = 28.sp,
+                color = MaterialTheme.colorScheme.onBackground,
+                style = MaterialTheme.typography.headlineMedium
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -108,7 +177,6 @@ fun ProfileContent(
                 elevation = CardDefaults.cardElevation(4.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    // Os dados são retirados do objeto User
                     ProfileInfo("Nome", data.nome)
                     ProfileInfo("Idade", data.idade)
                     ProfileInfo("Sexo", data.sexo)
@@ -117,38 +185,71 @@ fun ProfileContent(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Text(
-                        "Meta pessoal",
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    OutlinedTextField(
-                        value = meta,
-                        onValueChange = onMetaChange, // Usa o callback do ViewModel
-                        placeholder = { Text("Ex: ganhar massa") },
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = defaultTextFieldColors()
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Button(
-                        onClick = onSaveMeta, // Usa o callback do ViewModel
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.medium,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        )
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Salvar Meta")
+                        Text(
+                            "Meta pessoal",
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        IconButton(onClick = { onToggleEditMeta(!isEditingMeta) }) {
+                            Icon(
+                                imageVector = if (isEditingMeta) Icons.Default.Save else Icons.Default.Edit,
+                                contentDescription = if (isEditingMeta) "Salvar Meta" else "Editar Meta",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp)) // Espaço entre os botões
+                    if (isEditingMeta) {
+                        OutlinedTextField(
+                            value = meta,
+                            onValueChange = onMetaChange,
+                            placeholder = { Text("Ex: ganhar massa") },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = defaultTextFieldColors(),
+                            singleLine = true,
+                            enabled = !isSavingMeta
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = onSaveMeta,
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = meta.isNotBlank() && !isSavingMeta,
+                            shape = MaterialTheme.shapes.medium,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        ) {
+                            if (isSavingMeta) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            } else {
+                                Text("Salvar")
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    } else {
+                        Text(
+                            text = if (meta.isNotBlank()) meta else "Não definida",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Button(
-                        onClick = onLogout, // Usa o callback do ViewModel
+                        onClick = onLogout,
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.medium,
                         colors = ButtonDefaults.buttonColors(
@@ -180,6 +281,7 @@ fun ProfileInfo(label: String, value: String) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun defaultTextFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedTextColor = MaterialTheme.colorScheme.onSurface,
