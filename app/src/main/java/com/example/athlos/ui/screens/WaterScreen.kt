@@ -1,3 +1,4 @@
+// app/src/main/java/com/example/athlos/ui/screens/WaterScreen.kt
 package com.example.athlos.ui.screens
 
 import androidx.compose.animation.core.*
@@ -6,7 +7,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -16,23 +16,16 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.time.LocalDate
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.athlos.ui.viewmodels.WaterViewModel
 import kotlin.math.sin
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WaterScreen() {
-    val today = remember { LocalDate.now() }
-    var lastDate by rememberSaveable { mutableStateOf(today) }
-    var waterIntake by rememberSaveable { mutableStateOf(0) }
-
-    val maxGoal = 10000  // 10 litros
-
-    LaunchedEffect(key1 = today) {
-        if (today != lastDate) {
-            waterIntake = 0
-            lastDate = today
-        }
-    }
+fun WaterScreen(
+    waterViewModel: WaterViewModel = viewModel()
+) {
+    val uiState by waterViewModel.uiState.collectAsState()
 
     val waveShiftAnim = rememberInfiniteTransition()
         .animateFloat(
@@ -43,7 +36,7 @@ fun WaterScreen() {
             )
         )
 
-    val progress = (waterIntake / maxGoal.toFloat()).coerceIn(0f, 1f)
+    val progress = (uiState.aguaAtual / uiState.aguaMeta.toFloat()).coerceIn(0f, 1f)
 
     Box(
         modifier = Modifier
@@ -96,12 +89,19 @@ fun WaterScreen() {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            val waterIntakeLiters = waterIntake / 1000f
+            val waterIntakeLiters = uiState.aguaAtual / 1000f
 
             Text(
                 text = String.format("%.2f litros", waterIntakeLiters),
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(top = 8.dp),
+                textAlign = TextAlign.Center,
+                fontSize = 48.sp
+            )
+            Text(
+                text = "/ ${uiState.aguaMeta} ml",
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                fontSize = 18.sp,
                 textAlign = TextAlign.Center
             )
 
@@ -112,9 +112,7 @@ fun WaterScreen() {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Button(
-                    onClick = {
-                        if (waterIntake + 250 <= maxGoal) waterIntake += 250
-                    },
+                    onClick = { waterViewModel.addWater(250) },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary
@@ -124,15 +122,22 @@ fun WaterScreen() {
                 }
 
                 Button(
-                    onClick = {
-                        if (waterIntake + 500 <= maxGoal) waterIntake += 500
-                    },
+                    onClick = { waterViewModel.addWater(500) },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
                     Text("+500ml")
+                }
+                Button(
+                    onClick = { waterViewModel.addWater(1000) },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Text("+1000ml")
                 }
             }
         }
