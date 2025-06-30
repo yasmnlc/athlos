@@ -17,13 +17,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.athlos.R
-import com.example.athlos.ui.viewmodels.HomeViewModel
-
-data class Workout(
-    val title: String,
-    val description: String,
-    val imageRes: Int
-)
+import com.example.athlos.viewmodels.HomeViewModel
+import com.example.athlos.data.model.User
+import com.example.athlos.data.model.Workout
 
 @Composable
 fun HomeScreen(
@@ -35,11 +31,7 @@ fun HomeScreen(
         homeViewModel.refreshUserData()
     }
 
-    val mockWorkouts = listOf(
-        Workout("Peito e tríceps", "Supino reto, voador, tríceps corda", R.drawable.athlos_logo),
-        Workout("Costas e bíceps", "Puxada alta, remada curvada", R.drawable.athlos_logo),
-        Workout("Pernas", "Agachamento, leg press, panturrilha", R.drawable.athlos_logo)
-    )
+    val favoriteWorkouts = uiState.favoriteWorkouts
 
     if (uiState.loading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -110,45 +102,67 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Treinos sugeridos",
+                text = "Seus treinos favoritos", // Texto atualizado
                 fontSize = 20.sp,
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            LazyColumn {
-                items(mockWorkouts) { workout ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 6.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Image(
-                                painter = painterResource(id = workout.imageRes),
-                                contentDescription = null,
-                                modifier = Modifier.size(64.dp)
-                            )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column {
-                                Text(
-                                    text = workout.title,
-                                    fontSize = 18.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = workout.description,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
+            if (favoriteWorkouts.isEmpty()) {
+                Text(
+                    text = "Você ainda não favoritou nenhum treino. Vá para a tela de Treinos para explorar!",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp)
+                )
+            } else {
+                LazyColumn {
+                    items(favoriteWorkouts) { workout -> // Usa a lista de treinos FAVORITOS
+                        // A WorkoutCard na HomeScreen é apenas para exibição (sem botão de favorito)
+                        WorkoutCardDisplay(workout = workout)
                     }
                 }
             }
+        }
+    }
+}
+
+// Composable para exibir o card de treino (apenas display, sem lógica de favorito)
+@Composable
+fun WorkoutCardDisplay(workout: Workout) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Image(
+                painter = painterResource(id = workout.imageRes),
+                contentDescription = null,
+                modifier = Modifier.size(64.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = workout.title,
+                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = workout.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            // Não há botão de favorito aqui, pois é apenas para exibição
         }
     }
 }

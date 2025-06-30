@@ -11,9 +11,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.athlos.ui.viewmodels.LoginViewModel
+import com.example.athlos.viewmodels.LoginViewModel
 import com.example.athlos.ui.screens.defaultTextFieldColors
-import com.example.athlos.ui.viewmodels.LoginUiState
+import com.example.athlos.viewmodels.LoginUiState
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(

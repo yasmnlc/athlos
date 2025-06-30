@@ -28,9 +28,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.athlos.api.RetrofitInstance
 import com.example.athlos.ui.models.FoodItem
 import com.example.athlos.ui.theme.DarkGreen
-import com.example.athlos.viewmodel.FoodSearchViewModel
+import com.example.athlos.viewmodels.FoodSearchViewModel
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 
 private val MealTitleBackgroundColor = Color(0xFFE0E0E0)
 private val FoodCardBackgroundColor = Color(0xFFF5F5F5)

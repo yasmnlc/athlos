@@ -1,4 +1,3 @@
-
 package com.example.athlos
 
 import android.os.Bundle
@@ -17,17 +16,17 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import com.example.athlos.ui.screens.*
+import com.example.athlos.ui.screens.signinscreens.RegisterScreen
 import com.example.athlos.ui.screens.DARK_MODE_KEY
 import com.example.athlos.ui.screens.dataStore
 import com.example.athlos.ui.theme.AthlosTheme
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import android.util.Log
-
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
-import com.example.athlos.ui.screens.signinscreens.RegisterScreen
-
+import androidx.compose.material.icons.filled.LocalDrink
+import androidx.compose.material.icons.filled.FitnessCenter
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,7 +61,6 @@ fun AthlosApp() {
         composable("login") { LoginScreen(mainNavController) }
         composable("register") { RegisterScreen(mainNavController) }
         composable("main") {
-            // No athlosyasmin, MainScreenWithBottomNav recebe mainNavController
             MainScreenWithBottomNav(mainNavController = mainNavController)
         }
         composable("settings") { SettingsScreen() }
@@ -79,11 +77,10 @@ val drawerItems = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreenWithBottomNav(mainNavController: NavHostController) { // <-- CORREÇÃO AQUI: Removido '?' e '= null'
+fun MainScreenWithBottomNav(mainNavController: NavHostController) {
     val bottomNavController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    // ADICIONADO DO ATHLOSYASMIN: Instância do FirebaseAuth
     val auth = FirebaseAuth.getInstance()
 
     ModalNavigationDrawer(
@@ -98,10 +95,9 @@ fun MainScreenWithBottomNav(mainNavController: NavHostController) { // <-- CORRE
                         selected = false,
                         onClick = {
                             scope.launch { drawerState.close() }
-                            // Aqui item.route já será o valor correto (String? ou null)
                             item.route?.let { route ->
-                                mainNavController.navigate(route) { // Ajustado para mainNavController não nulo
-                                    popUpTo(mainNavController.graph.findStartDestination().id) { // Ajustado para mainNavController não nulo
+                                mainNavController.navigate(route) {
+                                    popUpTo(mainNavController.graph.findStartDestination().id) {
                                         saveState = true
                                     }
                                     launchSingleTop = true
@@ -111,17 +107,15 @@ fun MainScreenWithBottomNav(mainNavController: NavHostController) { // <-- CORRE
                         }
                     )
                 }
-                // ADICIONADO DO ATHLOSYASMIN: Item "Sair" com lógica de logout do Firebase
                 NavigationDrawerItem(
                     label = { Text("Sair") },
                     icon = { Icon(Icons.Default.ExitToApp, contentDescription = "Sair") },
                     selected = false,
                     onClick = {
                         scope.launch { drawerState.close() }
-                        auth.signOut() // Realiza o logout do Firebase
-                        mainNavController.navigate("login") { // Ajustado para mainNavController não nulo
-                            // Limpa o back stack para que o usuário não possa voltar à tela principal
-                            popUpTo(mainNavController.graph.id) { // Ajustado para mainNavController não nulo
+                        auth.signOut()
+                        mainNavController.navigate("login") {
+                            popUpTo(mainNavController.graph.id) {
                                 inclusive = true
                             }
                         }

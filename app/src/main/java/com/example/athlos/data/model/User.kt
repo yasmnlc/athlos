@@ -18,5 +18,15 @@ data class User(
     val aguaAtual: Int = 0,
     val aguaMeta: Int = 2000,
     val lastResetDate: String = LocalDate.MIN.format(DateTimeFormatter.ISO_LOCAL_DATE),
-    val profileImageUrl: String? = null
-)
+    val profileImageUrl: String? = null,
+    val favoriteWorkouts: List<String> = emptyList()
+){
+    @Suppress("unused")
+    constructor() : this(
+        uid = "", nome = "", dataNascimento = "", idade = "", sexo = "",
+        peso = "", altura = "", email = "", praticaExercicios = false, diasSemana = "",
+        meta = "", aguaAtual = 0, aguaMeta = 2000,
+        lastResetDate = LocalDate.MIN.format(DateTimeFormatter.ISO_LOCAL_DATE), profileImageUrl = null,
+        favoriteWorkouts = emptyList()
+    )
+}
