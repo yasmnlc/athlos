@@ -13,10 +13,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.athlos.data.model.User
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.athlos.data.model.User
 import com.example.athlos.ui.viewmodels.ProfileViewModel
-import com.example.athlos.ui.screens.defaultTextFieldColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,7 +23,6 @@ fun ProfileScreen(
     mainNavController: NavHostController,
     profileViewModel: ProfileViewModel = viewModel()
 ) {
-
     val uiState by profileViewModel.uiState.collectAsState()
 
     LaunchedEffect(profileViewModel) {
@@ -36,6 +34,7 @@ fun ProfileScreen(
             CircularProgressIndicator()
         }
     } else {
+        // Se houver dados do usuário, exibe o conteúdo do perfil
         uiState.userData?.let { data ->
             ProfileContent(
                 data = data,
@@ -50,8 +49,12 @@ fun ProfileScreen(
                 }
             )
         } ?: run {
+
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Erro ao carregar dados do perfil: ${uiState.errorMessage ?: "Desconhecido"}", color = MaterialTheme.colorScheme.error)
+                Text(
+                    "Erro ao carregar dados do perfil: ${uiState.errorMessage ?: "Desconhecido"}",
+                    color = MaterialTheme.colorScheme.error
+                )
             }
         }
     }
@@ -105,6 +108,7 @@ fun ProfileContent(
                 elevation = CardDefaults.cardElevation(4.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
+                    // Os dados são retirados do objeto User
                     ProfileInfo("Nome", data.nome)
                     ProfileInfo("Idade", data.idade)
                     ProfileInfo("Sexo", data.sexo)
@@ -121,7 +125,7 @@ fun ProfileContent(
 
                     OutlinedTextField(
                         value = meta,
-                        onValueChange = onMetaChange,
+                        onValueChange = onMetaChange, // Usa o callback do ViewModel
                         placeholder = { Text("Ex: ganhar massa") },
                         modifier = Modifier.fillMaxWidth(),
                         colors = defaultTextFieldColors()
@@ -130,7 +134,7 @@ fun ProfileContent(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Button(
-                        onClick = onSaveMeta,
+                        onClick = onSaveMeta, // Usa o callback do ViewModel
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.medium,
                         colors = ButtonDefaults.buttonColors(
@@ -141,10 +145,10 @@ fun ProfileContent(
                         Text("Salvar Meta")
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp)) // Espaço entre os botões
 
                     Button(
-                        onClick = onLogout,
+                        onClick = onLogout, // Usa o callback do ViewModel
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.medium,
                         colors = ButtonDefaults.buttonColors(
@@ -175,3 +179,16 @@ fun ProfileInfo(label: String, value: String) {
         )
     }
 }
+
+@Composable
+internal fun defaultTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+    cursorColor = MaterialTheme.colorScheme.primary,
+    focusedContainerColor = MaterialTheme.colorScheme.surface,
+    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+    focusedLabelColor = MaterialTheme.colorScheme.onSurface,
+    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface,
+    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+)

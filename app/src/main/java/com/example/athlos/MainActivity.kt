@@ -1,4 +1,4 @@
-// MainActivity.kt
+
 package com.example.athlos
 
 import android.os.Bundle
@@ -16,21 +16,24 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
-import com.example.athlos.ui.screens.* // Importa as telas
+import com.example.athlos.ui.screens.*
 import com.example.athlos.ui.screens.DARK_MODE_KEY
 import com.example.athlos.ui.screens.dataStore
 import com.example.athlos.ui.theme.AthlosTheme
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import android.util.Log
+
 import com.google.firebase.FirebaseApp
-import com.google.firebase.auth.FirebaseAuth // Importa FirebaseAuth
-import androidx.compose.material.icons.filled.LocalDrink // Importe para o ícone de água
+import com.google.firebase.auth.FirebaseAuth
+import com.example.athlos.ui.screens.signinscreens.RegisterScreen
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FirebaseApp.initializeApp(this)
+
         setContent {
             val darkModeEnabled by this.dataStore.data.map { preferences ->
                 preferences[DARK_MODE_KEY] ?: false
@@ -59,7 +62,8 @@ fun AthlosApp() {
         composable("login") { LoginScreen(mainNavController) }
         composable("register") { RegisterScreen(mainNavController) }
         composable("main") {
-            MainScreenWithBottomNav(mainNavController)
+            // No athlosyasmin, MainScreenWithBottomNav recebe mainNavController
+            MainScreenWithBottomNav(mainNavController = mainNavController)
         }
         composable("settings") { SettingsScreen() }
     }
@@ -68,17 +72,18 @@ fun AthlosApp() {
 data class DrawerItem(val label: String, val icon: ImageVector, val route: String? = null)
 
 val drawerItems = listOf(
-    DrawerItem("Dúvidas frequentes", Icons.Default.Help),
+    DrawerItem("Dúvidas frequentes", Icons.Default.Help, null),
     DrawerItem("Configurações", Icons.Default.Settings, "settings"),
-    DrawerItem("Fale Conosco", Icons.Default.Email),
+    DrawerItem("Fale Conosco", Icons.Default.Email, null)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreenWithBottomNav(mainNavController: NavHostController) {
+fun MainScreenWithBottomNav(mainNavController: NavHostController) { // <-- CORREÇÃO AQUI: Removido '?' e '= null'
     val bottomNavController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    // ADICIONADO DO ATHLOSYASMIN: Instância do FirebaseAuth
     val auth = FirebaseAuth.getInstance()
 
     ModalNavigationDrawer(
@@ -93,9 +98,10 @@ fun MainScreenWithBottomNav(mainNavController: NavHostController) {
                         selected = false,
                         onClick = {
                             scope.launch { drawerState.close() }
+                            // Aqui item.route já será o valor correto (String? ou null)
                             item.route?.let { route ->
-                                mainNavController.navigate(route) {
-                                    popUpTo(mainNavController.graph.findStartDestination().id) {
+                                mainNavController.navigate(route) { // Ajustado para mainNavController não nulo
+                                    popUpTo(mainNavController.graph.findStartDestination().id) { // Ajustado para mainNavController não nulo
                                         saveState = true
                                     }
                                     launchSingleTop = true
@@ -105,15 +111,17 @@ fun MainScreenWithBottomNav(mainNavController: NavHostController) {
                         }
                     )
                 }
+                // ADICIONADO DO ATHLOSYASMIN: Item "Sair" com lógica de logout do Firebase
                 NavigationDrawerItem(
                     label = { Text("Sair") },
                     icon = { Icon(Icons.Default.ExitToApp, contentDescription = "Sair") },
                     selected = false,
                     onClick = {
                         scope.launch { drawerState.close() }
-                        auth.signOut()
-                        mainNavController.navigate("login") {
-                            popUpTo(mainNavController.graph.id) {
+                        auth.signOut() // Realiza o logout do Firebase
+                        mainNavController.navigate("login") { // Ajustado para mainNavController não nulo
+                            // Limpa o back stack para que o usuário não possa voltar à tela principal
+                            popUpTo(mainNavController.graph.id) { // Ajustado para mainNavController não nulo
                                 inclusive = true
                             }
                         }
@@ -136,7 +144,7 @@ fun MainScreenWithBottomNav(mainNavController: NavHostController) {
             bottomBar = {
                 val items = listOf(
                     Screen.Home,
-                    Screen.Water, // Incluir Water na lista
+                    Screen.Water,
                     Screen.Diary,
                     Screen.Training,
                     Screen.Profile
@@ -188,7 +196,7 @@ fun MainScreenWithBottomNav(mainNavController: NavHostController) {
                 modifier = Modifier.padding(innerPadding)
             ) {
                 composable(Screen.Home.route) { HomeScreen() }
-                composable(Screen.Water.route) { WaterScreen() } // Adicionada WaterScreen
+                composable(Screen.Water.route) { WaterScreen() }
                 composable(Screen.Diary.route) { DiaryScreen() }
                 composable(Screen.Training.route) { TrainingScreen() }
                 composable(Screen.Profile.route) { ProfileScreen(mainNavController = mainNavController) }
@@ -199,7 +207,7 @@ fun MainScreenWithBottomNav(mainNavController: NavHostController) {
 
 sealed class Screen(val route: String, val icon: ImageVector) {
     object Home : Screen("home", Icons.Default.Home)
-    object Water : Screen("water", Icons.Default.LocalDrink) // Ícone para água
+    object Water : Screen("water", Icons.Default.LocalDrink)
     object Diary : Screen("diary", Icons.Default.MenuBook)
     object Training : Screen("training", Icons.Default.FitnessCenter)
     object Profile : Screen("profile", Icons.Default.Person)

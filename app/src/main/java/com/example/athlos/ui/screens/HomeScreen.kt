@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.athlos.R
 import com.example.athlos.ui.viewmodels.HomeViewModel
+import com.example.athlos.data.model.User
 
 data class Workout(
     val title: String,
