@@ -2,6 +2,7 @@ package com.example.athlos.data.model
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import com.google.firebase.firestore.Exclude
 
 data class User(
     val uid: String = "",
@@ -20,7 +21,7 @@ data class User(
     val lastResetDate: String = LocalDate.MIN.format(DateTimeFormatter.ISO_LOCAL_DATE),
     val profileImageUrl: String? = null,
     val favoriteWorkouts: List<String> = emptyList()
-){
+) {
     @Suppress("unused")
     constructor() : this(
         uid = "", nome = "", dataNascimento = "", idade = "", sexo = "",
@@ -29,4 +30,14 @@ data class User(
         lastResetDate = LocalDate.MIN.format(DateTimeFormatter.ISO_LOCAL_DATE), profileImageUrl = null,
         favoriteWorkouts = emptyList()
     )
+
+    @Exclude
+    fun getPesoAsFloat(): Float? {
+        return peso.toFloatOrNull()
+    }
+
+    @Exclude
+    fun getAlturaAsFloat(): Float? {
+        return altura.toFloatOrNull()
+    }
 }

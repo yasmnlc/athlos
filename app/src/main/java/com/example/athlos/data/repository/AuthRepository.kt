@@ -33,17 +33,26 @@ class FirebaseAuthRepository(
         val initialUser = User(
             uid = user.uid,
             email = email,
-            lastResetDate = LocalDate.MIN.format(DateTimeFormatter.ISO_LOCAL_DATE),
-            aguaMeta = 2500,
-            aguaAtual = 0,
+            nome = "",
+            dataNascimento = "",
+            idade = "",
+            sexo = "",
+            peso = "",
+            altura = "",
+            praticaExercicios = false,
+            diasSemana = "",
             meta = "",
-            profileImageUrl = null
+            aguaAtual = 0,
+            aguaMeta = 2000,
+            lastResetDate = LocalDate.MIN.format(DateTimeFormatter.ISO_LOCAL_DATE),
+            profileImageUrl = null,
+            favoriteWorkouts = emptyList()
         )
 
-        val initialUserMap = initialUser.toMap().toMutableMap()
-        initialUserMap.putAll(userDataMap)
+        val finalUserDataToSave = initialUser.toMap().toMutableMap()
+        finalUserDataToSave.putAll(userDataMap)
 
-        firestore.collection("users").document(user.uid).set(initialUserMap).await()
+        firestore.collection("users").document(user.uid).set(finalUserDataToSave).await()
         return user
     }
 

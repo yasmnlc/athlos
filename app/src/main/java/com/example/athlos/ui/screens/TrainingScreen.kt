@@ -39,16 +39,7 @@ fun TrainingScreen(
         trainingViewModel.refreshWorkouts()
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Todos os Treinos", color = MaterialTheme.colorScheme.onPrimaryContainer) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            )
-        }
-    ) { paddingValues ->
+    Scaffold { paddingValues ->
         if (uiState.loading) {
             Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()

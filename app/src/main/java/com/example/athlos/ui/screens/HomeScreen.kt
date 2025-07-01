@@ -102,7 +102,7 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Seus treinos favoritos", // Texto atualizado
+                text = "Seus treinos favoritos",
                 fontSize = 20.sp,
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(bottom = 8.dp)
@@ -117,8 +117,7 @@ fun HomeScreen(
                 )
             } else {
                 LazyColumn {
-                    items(favoriteWorkouts) { workout -> // Usa a lista de treinos FAVORITOS
-                        // A WorkoutCard na HomeScreen é apenas para exibição (sem botão de favorito)
+                    items(favoriteWorkouts) { workout ->
                         WorkoutCardDisplay(workout = workout)
                     }
                 }
@@ -127,7 +126,6 @@ fun HomeScreen(
     }
 }
 
-// Composable para exibir o card de treino (apenas display, sem lógica de favorito)
 @Composable
 fun WorkoutCardDisplay(workout: Workout) {
     Card(
@@ -162,7 +160,6 @@ fun WorkoutCardDisplay(workout: Workout) {
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
-            // Não há botão de favorito aqui, pois é apenas para exibição
         }
     }
 }

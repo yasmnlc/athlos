@@ -5,27 +5,27 @@ googleServices = "4.4.2"
 
 coreKtx = "1.16.0"
 junit = "4.13.2"
-junitVersion = "1.2.1" # Ambos usam a mesma versão
-espressoCore = "3.6.1" # Ambos usam a mesma versão
-lifecycleRuntimeKtx = "2.9.0" # Ambos usam a mesma versão
-activityCompose = "1.10.1" # Ambos usam a mesma versão
-composeBom = "2024.09.00" # Ambos usam a mesma versão
-lifecycleRuntimeCompose = "2.8.0" # Apenas em athlosparte3, mantendo
-compiler = "3.2.0-alpha11" # Apenas em athlosparte3, mantendo
+junitVersion = "1.2.1"
+espressoCore = "3.6.1"
+lifecycleRuntimeKtx = "2.9.0"
+activityCompose = "1.10.1"
+composeBom = "2024.09.00"
+lifecycleRuntimeCompose = "2.8.0"
+compiler = "3.2.0-alpha11"
 
 retrofit = "2.9.0"
 okhttp = "4.12.0"
 lottieCompose = "6.0.0"
-datastorePreferences = "1.0.0" # Apenas em athlosparte3, mantendo
-navigationCompose = "2.7.7" # Apenas em athlosparte3, mantendo
-materialIconsExtended = "1.4.3" # Apenas em athlosparte3, mantendo
-googleMaterial = "1.12.0" # Apenas em athlosparte3, mantendo
-lifecycleViewmodelCompose = "2.8.0" # Do athlosyasmin (embora não no TOML original dele, estava no build.gradle)
+datastorePreferences = "1.0.0"
+navigationCompose = "2.7.7"
+materialIconsExtended = "1.4.3"
+googleMaterial = "1.12.0"
+lifecycleViewmodelCompose = "2.8.0"
 
-# Versões das bibliotecas Firebase (do athlosyasmin)
-firebaseBom = "33.15.0" # Do athlosyasmin
-kotlinxCoroutinesPlayServices = "1.8.0" # Do athlosyasmin
-kotlinxCoroutinesAndroid = "1.8.0" # Do athlosyasmin
+
+firebaseBom = "33.15.0"
+kotlinxCoroutinesPlayServices = "1.8.0"
+kotlinxCoroutinesAndroid = "1.8.0"
 
 [libraries]
 # AndroidX e Jetpack Compose
