@@ -1,44 +1,27 @@
 package com.example.athlos.ui.models
 
 import com.google.gson.annotations.SerializedName
+import com.example.athlos.ui.models.FoodItem
+
 
 data class FoodSearchResponse(
-    @SerializedName("hints") val hints: List<Hint>
+    @SerializedName("foods") val foods: FoodsContainer
 )
 
-data class Hint(
-    @SerializedName("food") val food: FoodItemApi
+data class FoodsContainer(
+    @SerializedName("food") val food: List<FatSecretFood>
 )
 
-data class FoodItemApi(
-    @SerializedName("label") val name: String,
-    @SerializedName("nutrients") val nutrients: Nutrients
+data class FatSecretFood(
+    @SerializedName("food_id") val id: String,
+    @SerializedName("food_name") val name: String,
+    @SerializedName("food_description") val description: String
 )
 
-data class Nutrients(
-    @SerializedName("ENERC_KCAL") val calories: Float?,
-    @SerializedName("PROCNT") val protein: Float?,
-    @SerializedName("FAT") val fat: Float?,
-    @SerializedName("CHOCDF") val carbohydrate: Float?,
-    @SerializedName("FIBTG") val fiber: Float?
-)
 
-data class FoodItem(
-    val name: String,
-    val quantity: Float = 100f,
-    val unit: String = "g",
-    val calories: Float = 0f,
-    val protein: Float = 0f,
-    val fat: Float = 0f,
-    val carbohydrate: Float = 0f,
-    val fiber: Float = 0f
-)
-
-fun FoodItemApi.toFoodItem(): FoodItem = FoodItem(
-    name = name,
-    calories = nutrients.calories ?: 0f,
-    protein = nutrients.protein ?: 0f,
-    fat = nutrients.fat ?: 0f,
-    carbohydrate = nutrients.carbohydrate ?: 0f,
-    fiber = nutrients.fiber ?: 0f
-)
+fun FatSecretFood.toFoodItem(): FoodItem {
+    val desc = description
+    return FoodItem(
+        name = name
+    )
+}

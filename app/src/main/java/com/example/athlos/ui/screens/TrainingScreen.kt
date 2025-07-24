@@ -1,80 +1,178 @@
 package com.example.athlos.ui.screens
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.athlos.data.model.Workout
+import com.example.athlos.ui.models.Workout
+import com.example.athlos.ui.components.SaveWorkoutDialog
+import com.example.athlos.ui.models.Exercise
 import com.example.athlos.viewmodels.TrainingViewModel
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrainingScreen(
-    trainingViewModel: TrainingViewModel = viewModel()
+    trainingViewModel: TrainingViewModel = viewModel(),
+    onSavedWorkoutsClick: () -> Unit,
+    onNavigateToExerciseList: (String) -> Unit
 ) {
     val uiState by trainingViewModel.uiState.collectAsState()
+    var showSaveDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(key1 = trainingViewModel) {
-        trainingViewModel.refreshWorkouts()
+    LaunchedEffect(uiState.saveStatusMessage) {
+        uiState.saveStatusMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            trainingViewModel.clearSaveStatusMessage()
+        }
     }
 
-    Scaffold { paddingValues ->
-        if (uiState.loading) {
-            Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else if (uiState.errorMessage != null) {
-            Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                Text(
-                    text = "Erro: ${uiState.errorMessage}",
-                    color = MaterialTheme.colorScheme.error,
-                    fontSize = 18.sp
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            if (uiState.isBuildingMode && uiState.selectedExerciseIds.isNotEmpty()) {
+                ExtendedFloatingActionButton(
+                    onClick = { showSaveDialog = true },
+                    icon = { Icon(Icons.Filled.Save, "Salvar Treino") },
+                    text = { Text("Concluir Treino (${uiState.selectedExerciseIds.size})") }
                 )
             }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp)
+        },
+        floatingActionButtonPosition = FabPosition.Center
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp)
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = { trainingViewModel.toggleBuildMode() },
+                    modifier = Modifier.weight(1f),
+                    colors = if (uiState.isBuildingMode) ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary) else ButtonDefaults.buttonColors()
+                ) {
+                    Text(if (uiState.isBuildingMode) "Cancelar" else "Montar Treino")
+                }
+                OutlinedButton(
+                    onClick = onSavedWorkoutsClick,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Treinos Salvos")
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = if (uiState.isBuildingMode) "Selecione os exercícios" else "Explore por grupo muscular",
+                fontSize = 20.sp
+            )
+            Spacer(modifier = Modifier.height(8.dp))
 
-                Text(
-                    text = "Explore e favorite seus treinos",
-                    fontSize = 20.sp,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
-                LazyColumn {
+            if (uiState.loading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     items(uiState.workouts) { workout ->
-                        WorkoutCardWithFavorite(
+                        ExpandableWorkoutCard(
                             workout = workout,
-                            onToggleFavorite = { id, isFav -> trainingViewModel.toggleFavorite(id, isFav) }
+                            isExpanded = uiState.expandedWorkoutId == workout.id,
+                            isBuildingMode = uiState.isBuildingMode,
+                            exercises = uiState.exercisesForSelectedWorkout,
+                            isLoadingExercises = uiState.isLoadingExercises,
+                            selectedExerciseIds = uiState.selectedExerciseIds,
+                            onCardClick = {
+                                if (uiState.isBuildingMode) {
+                                    trainingViewModel.onWorkoutCardClicked(workout)
+                                } else {
+                                    onNavigateToExerciseList(workout.apiBodyPart)
+                                }
+                            },
+                            onExerciseSelected = { exerciseId ->
+                                trainingViewModel.toggleExerciseSelection(exerciseId)
+                            }
                         )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showSaveDialog) {
+        SaveWorkoutDialog(
+            onDismiss = { showSaveDialog = false },
+            onSave = { workoutName ->
+                trainingViewModel.saveWorkout(workoutName)
+                showSaveDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun ExpandableWorkoutCard(
+    workout: Workout,
+    isExpanded: Boolean,
+    isBuildingMode: Boolean,
+    exercises: List<Exercise>,
+    isLoadingExercises: Boolean,
+    selectedExerciseIds: Set<String>,
+    onCardClick: () -> Unit,
+    onExerciseSelected: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCardClick() },
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Image(painter = painterResource(id = workout.imageRes), contentDescription = null, modifier = Modifier.size(64.dp))
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = workout.title, style = MaterialTheme.typography.titleLarge)
+                    Text(text = workout.description, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+
+            AnimatedVisibility(visible = isExpanded && isBuildingMode) {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    if (isLoadingExercises) {
+                        Box(modifier = Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center){
+                            CircularProgressIndicator()
+                        }
+                    } else {
+                        exercises.forEach { exercise ->
+                            SelectableExerciseRow(
+                                exercise = exercise,
+                                isSelected = selectedExerciseIds.contains(exercise.id),
+                                onExerciseSelected = { onExerciseSelected(exercise.id) }
+                            )
+                        }
                     }
                 }
             }
@@ -83,62 +181,21 @@ fun TrainingScreen(
 }
 
 @Composable
-fun WorkoutCardWithFavorite(workout: Workout, onToggleFavorite: (String, Boolean) -> Unit) {
-    Card(
+fun SelectableExerciseRow(
+    exercise: Exercise,
+    isSelected: Boolean,
+    onExerciseSelected: () -> Unit
+) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .clickable { onExerciseSelected() }
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                Image(
-                    painter = painterResource(id = workout.imageRes),
-                    contentDescription = null,
-                    modifier = Modifier.size(64.dp)
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
-                        text = workout.title,
-                        fontSize = 18.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = workout.description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    )
-                }
-            }
-
-            val favoriteIcon = if (workout.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder
-            val tintColor = if (workout.isFavorite) Color.Red else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-
-            val scale by animateFloatAsState(
-                targetValue = if (workout.isFavorite) 1.2f else 1f,
-                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-                label = "favoriteIconScale"
-            )
-
-            IconButton(
-                onClick = { onToggleFavorite(workout.id, workout.isFavorite) },
-                modifier = Modifier.padding(start = 8.dp)
-            ) {
-                Icon(
-                    imageVector = favoriteIcon,
-                    contentDescription = "Marcar como favorito",
-                    tint = tintColor,
-                    modifier = Modifier.scale(scale)
-                )
-            }
+        Column(modifier = Modifier.weight(1f)) {
+            Text((exercise.name ?: "Exercício").replaceFirstChar { it.uppercase() })
         }
+        Checkbox(checked = isSelected, onCheckedChange = { onExerciseSelected() })
     }
 }

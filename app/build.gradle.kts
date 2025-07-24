@@ -45,7 +45,26 @@ android {
 }
 
 dependencies {
+
+    val media3Version = "1.3.1"
+    implementation("androidx.media3:media3-exoplayer:$media3Version")
+    implementation("androidx.media3:media3-ui:$media3Version")
+    implementation("com.pierfrancescosoffritti.androidyoutubeplayer:core:12.1.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+    implementation ("androidx.compose.ui:ui-viewbinding:<compose_version>")
+
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:okhttp:4.10.0")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    implementation("com.google.mlkit:translate:17.0.2")
+    // Retrofit para chamadas de rede
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+
+    // Coil para carregar imagens e GIFs
+    implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("io.coil-kt:coil-gif:2.5.0")
 
     // === DEPENDÊNCIAS DO COMPOSE ===
     implementation(platform(libs.androidx.compose.bom))

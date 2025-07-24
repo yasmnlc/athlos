@@ -1,10 +1,11 @@
 package com.example.athlos.data.repository
 
 import com.example.athlos.data.model.User
-import com.example.athlos.utils.await
+import com.example.athlos.ui.models.CustomWorkout
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.reflect.KProperty1
@@ -16,6 +17,9 @@ interface AuthRepository {
     fun logoutUser()
     suspend fun getUserData(uid: String): User?
     suspend fun updateUserData(uid: String, updates: Map<String, Any>)
+    suspend fun saveCustomWorkout(workout: CustomWorkout)
+    suspend fun getCustomWorkouts(): List<CustomWorkout>
+    suspend fun deleteCustomWorkout(workoutId: String)
 }
 
 class FirebaseAuthRepository(
@@ -28,7 +32,7 @@ class FirebaseAuthRepository(
 
     override suspend fun registerUser(email: String, password: String, userDataMap: Map<String, Any>): FirebaseUser {
         val authResult = auth.createUserWithEmailAndPassword(email, password).await()
-        val user = authResult.user ?: throw Exception("Usuário não encontrado após o registro")
+        val user = authResult.user ?: throw Exception("Utilizador não encontrado após o registo")
 
         val initialUser = User(
             uid = user.uid,
@@ -58,7 +62,7 @@ class FirebaseAuthRepository(
 
     override suspend fun loginUser(email: String, password: String): FirebaseUser {
         val authResult = auth.signInWithEmailAndPassword(email, password).await()
-        return authResult.user ?: throw Exception("Usuário não encontrado após o login")
+        return authResult.user ?: throw Exception("Utilizador não encontrado após o login")
     }
 
     override fun logoutUser() {
@@ -76,6 +80,25 @@ class FirebaseAuthRepository(
 
     override suspend fun updateUserData(uid: String, updates: Map<String, Any>) {
         firestore.collection("users").document(uid).update(updates).await()
+    }
+
+    override suspend fun saveCustomWorkout(workout: CustomWorkout) {
+        val userId = currentUser?.uid ?: throw Exception("Utilizador não autenticado.")
+        firestore.collection("users").document(userId)
+            .collection("customWorkouts").add(workout.copy(userId = userId)).await()
+    }
+
+    override suspend fun getCustomWorkouts(): List<CustomWorkout> {
+        val userId = currentUser?.uid ?: return emptyList()
+        val snapshot = firestore.collection("users").document(userId)
+            .collection("customWorkouts").get().await()
+        return snapshot.toObjects(CustomWorkout::class.java)
+    }
+
+    override suspend fun deleteCustomWorkout(workoutId: String) {
+        val userId = currentUser?.uid ?: throw Exception("Utilizador não autenticado.")
+        firestore.collection("users").document(userId)
+            .collection("customWorkouts").document(workoutId).delete().await()
     }
 }
 
