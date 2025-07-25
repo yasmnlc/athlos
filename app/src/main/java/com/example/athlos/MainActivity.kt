@@ -1,5 +1,6 @@
 package com.example.athlos
 
+import android.app.Application
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,13 +13,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
+import com.example.athlos.data.repository.AuthRepository
+import com.example.athlos.data.repository.FirebaseAuthRepository
 import com.example.athlos.ui.screens.*
 import com.example.athlos.ui.screens.signinscreens.RegisterScreen
 import com.example.athlos.ui.theme.AthlosTheme
@@ -26,6 +31,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,10 +59,11 @@ fun AthlosApp() {
 
     NavHost(navController = mainNavController, startDestination = "splash") {
         composable("splash") { SplashScreen(mainNavController) }
-        composable("login") { LoginScreen(mainNavController) }
+        composable("login") { LoginScreen(navController = mainNavController) }
         composable("register") { RegisterScreen(mainNavController) }
         composable("main") { MainScreenWithBottomNav(mainNavController = mainNavController) }
         composable("settings") { SettingsScreen() }
+        composable("forgot_password") { ForgotPasswordScreen(mainNavController) }
     }
 }
 

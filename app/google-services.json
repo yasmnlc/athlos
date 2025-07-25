@@ -12,7 +12,20 @@
           "package_name": "com.example.athlos"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "532262747843-uv6fp22839m3mu2t4rq7fpfpv30hqifn.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.athlos",
+            "certificate_hash": "99608aa7ccc4ab0d42d7653a3303954a46d81d17"
+          }
+        },
+        {
+          "client_id": "532262747843-b2o04u39q7dogkdha0tcsbl7dn4jg3n5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBewNZAu_c-4KFqMRyULdDtyyfdjX8E3e4"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "532262747843-b2o04u39q7dogkdha0tcsbl7dn4jg3n5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

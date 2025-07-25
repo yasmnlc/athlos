@@ -41,6 +41,25 @@ class RegisterViewModel(
     private val _uiState = MutableStateFlow(RegisterUiState())
     val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
 
+    init {
+        loadInitialData()
+    }
+
+    private fun loadInitialData() {
+        viewModelScope.launch {
+            val currentUser = authRepository.currentUser
+            if (currentUser != null) {
+                val userData = authRepository.getUserData(currentUser.uid)
+                if (userData != null) {
+                    _uiState.value = _uiState.value.copy(
+                        nome = userData.nome,
+                        email = userData.email
+                    )
+                }
+            }
+        }
+    }
+
     fun updateNome(newNome: String) { _uiState.value = _uiState.value.copy(nome = newNome) }
     fun updateDataNascimento(newDateText: String) {
         val formatted = formatarData(newDateText)
@@ -153,6 +172,40 @@ class RegisterViewModel(
             for (i in numbers.indices) {
                 append(numbers[i])
                 if ((i == 1 || i == 3) && i != numbers.lastIndex) append('/')
+            }
+        }
+    }
+
+    fun salvarDadosAdicionaisDoPerfil() {
+        _uiState.value = _uiState.value.copy(carregando = true, erroMensagem = null)
+        viewModelScope.launch {
+            val currentUser = authRepository.currentUser
+            if (currentUser != null) {
+                try {
+                    val additionalData = mapOf(
+                        "dataNascimento" to _uiState.value.dataNascimentoText,
+                        "idade" to _uiState.value.idade,
+                        "sexo" to _uiState.value.sexo,
+                        "peso" to _uiState.value.peso,
+                        "altura" to _uiState.value.altura,
+                        "praticaExercicios" to _uiState.value.praticaExercicios,
+                        "diasSemana" to _uiState.value.diasSemana
+                    )
+                    // Usamos merge = true para não sobrescrever os dados básicos já salvos
+                    authRepository.updateUserData(currentUser.uid, additionalData, merge = true)
+
+                    _uiState.value = _uiState.value.copy(carregando = false, registroSucesso = true)
+                    Log.d("RegisterViewModel", "Dados adicionais do perfil salvos com sucesso.")
+
+                } catch (e: Exception) {
+                    _uiState.value = _uiState.value.copy(
+                        carregando = false,
+                        erroMensagem = "Falha ao salvar dados: ${e.message}"
+                    )
+                    Log.e("RegisterViewModel", "Erro ao salvar dados adicionais: ${e.message}", e)
+                }
+            } else {
+                _uiState.value = _uiState.value.copy(carregando = false, erroMensagem = "Nenhum usuário logado.")
             }
         }
     }

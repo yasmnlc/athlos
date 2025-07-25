@@ -1,14 +1,18 @@
 package com.example.athlos.data.repository
 
+import android.content.Context
+import android.util.Log
 import com.example.athlos.data.model.User
 import com.example.athlos.ui.models.CustomWorkout
+import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.tasks.await
+import com.example.athlos.utils.await
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.reflect.KProperty1
+import com.google.firebase.firestore.SetOptions
 
 interface AuthRepository {
     val currentUser: FirebaseUser?
@@ -20,11 +24,14 @@ interface AuthRepository {
     suspend fun saveCustomWorkout(workout: CustomWorkout)
     suspend fun getCustomWorkouts(): List<CustomWorkout>
     suspend fun deleteCustomWorkout(workoutId: String)
+    suspend fun signInWithCredential(credential: AuthCredential): FirebaseUser?
+    suspend fun sendPasswordResetEmail(email: String)
+    suspend fun updateUserData(userId: String, data: Map<String, Any>, merge: Boolean)
 }
 
 class FirebaseAuthRepository(
     private val auth: FirebaseAuth,
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
 ) : AuthRepository {
 
     override val currentUser: FirebaseUser?
@@ -79,7 +86,24 @@ class FirebaseAuthRepository(
     }
 
     override suspend fun updateUserData(uid: String, updates: Map<String, Any>) {
-        firestore.collection("users").document(uid).update(updates).await()
+        updateUserData(uid, updates, merge = false)
+    }
+
+    override suspend fun updateUserData(userId: String, data: Map<String, Any>, merge: Boolean) {
+        if (merge) {
+            // .set com SetOptions.merge():
+            // Cria o documento se ele não existir.
+            // Se o documento existir, apenas atualiza os campos do 'data', sem apagar os outros.
+            // É EXATAMENTE o que precisamos para o login com Google.
+            firestore.collection("users").document(userId)
+                .set(data, SetOptions.merge()).await()
+        } else {
+            // .update():
+            // Apenas atualiza os campos de um documento que já deve existir.
+            // Falha se o documento não existir. Mantém o comportamento original.
+            firestore.collection("users").document(userId)
+                .update(data).await()
+        }
     }
 
     override suspend fun saveCustomWorkout(workout: CustomWorkout) {
@@ -99,6 +123,15 @@ class FirebaseAuthRepository(
         val userId = currentUser?.uid ?: throw Exception("Utilizador não autenticado.")
         firestore.collection("users").document(userId)
             .collection("customWorkouts").document(workoutId).delete().await()
+    }
+
+    override suspend fun signInWithCredential(credential: AuthCredential): FirebaseUser? {
+        val userCredential = auth.signInWithCredential(credential).await()
+        return userCredential.user
+    }
+
+    override suspend fun sendPasswordResetEmail(email: String) {
+        auth.sendPasswordResetEmail(email).await() // Chama a função do Firebase Auth
     }
 }
 

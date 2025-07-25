@@ -20,6 +20,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FitnessCenter
 import com.example.athlos.viewmodels.RegisterViewModel
 import com.example.athlos.ui.screens.defaultTextFieldColors
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -133,8 +135,21 @@ fun RegisterExerciseScreen(navController: NavHostController, viewModel: Register
         Button(
             onClick = {
                 if (viewModel.isExerciseValid()) {
-                    viewModel.registrarUsuarioEPerfil()
+                    // LÓGICA ADICIONADA PARA VERIFICAR O TIPO DE USUÁRIO
+                    val currentUser = FirebaseAuth.getInstance().currentUser
+                    val isGoogleUser = currentUser?.providerData?.any { it.providerId == GoogleAuthProvider.PROVIDER_ID } == true
+
+                    if (isGoogleUser) {
+                        // Se for usuário do Google, apenas salva os dados adicionais que foram coletados
+                        viewModel.salvarDadosAdicionaisDoPerfil()
+                    } else {
+                        // Se for um cadastro normal por email/senha, executa o fluxo completo
+                        viewModel.registrarUsuarioEPerfil()
+                    }
+                    // A navegação para a tela de sucesso já é tratada pelo LaunchedEffect na tela principal de registro.
+                    // Apenas navegamos para a tela intermediária de "carregando".
                     navController.navigate("register_final_success")
+
                 } else {
                     Toast.makeText(context, "Por favor, selecione seu nível de atividade.", Toast.LENGTH_SHORT).show()
                 }

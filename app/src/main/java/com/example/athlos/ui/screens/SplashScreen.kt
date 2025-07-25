@@ -12,14 +12,24 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.navigation.NavHostController
 import com.example.athlos.R
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(navController: NavHostController) {
     LaunchedEffect(Unit) {
         delay(2000)
-        navController.navigate("login") {
-            popUpTo("splash") { inclusive = true }
+
+        val currentUser = FirebaseAuth.getInstance().currentUser
+
+        if (currentUser != null) {
+            navController.navigate("main") {
+                popUpTo("splash") { inclusive = true }
+            }
+        } else {
+            navController.navigate("login") {
+                popUpTo("splash") { inclusive = true }
+            }
         }
     }
 

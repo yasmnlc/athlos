@@ -20,6 +20,7 @@ import com.example.athlos.R
 import com.example.athlos.viewmodels.HomeViewModel
 import com.example.athlos.data.model.User
 import com.example.athlos.data.model.Workout
+import com.example.athlos.viewmodels.MacroTargets
 
 @Composable
 fun HomeScreen(
@@ -101,6 +102,16 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            NutritionalInfoCard(
+                tdee = uiState.tdee,
+                caloriesForLoss = uiState.caloriesForLoss,
+                caloriesForGain = uiState.caloriesForGain,
+                macrosForLoss = uiState.macrosForLoss,
+                macrosForGain = uiState.macrosForGain
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             Text(
                 text = "Seus treinos favoritos",
                 fontSize = 20.sp,
@@ -160,6 +171,58 @@ fun WorkoutCardDisplay(workout: Workout) {
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun NutritionalInfoCard(
+    tdee: Double,
+    caloriesForLoss: Double,
+    caloriesForGain: Double,
+    macrosForLoss: MacroTargets,
+    macrosForGain: MacroTargets
+) {
+    if (tdee <= 0) return // Não mostra o card se os cálculos não foram feitos
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "📊 Minhas Metas Nutricionais 🥗",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "Calorias para manter o peso: ${tdee.toInt()} kcal/dia",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Seção para Perder Peso
+            Text(
+                text = "Para Perder Peso (Déficit)",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text("Meta: ${caloriesForLoss.toInt()} kcal/dia")
+            Text("Macros: P: ${macrosForLoss.proteinGrams}g, G: ${macrosForLoss.fatGrams}g, C: ${macrosForLoss.carbGrams}g")
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Seção para Ganhar Peso
+            Text(
+                text = "Para Ganhar Peso (Superávit)",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text("Meta: ${caloriesForGain.toInt()} kcal/dia")
+            Text("Macros: P: ${macrosForGain.proteinGrams}g, G: ${macrosForGain.fatGrams}g, C: ${macrosForGain.carbGrams}g")
         }
     }
 }

@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,15 +28,18 @@ import androidx.navigation.NavHostController
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.athlos.data.model.User
+import com.example.athlos.viewmodels.LoginViewModel
 import com.example.athlos.viewmodels.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     mainNavController: NavHostController,
-    profileViewModel: ProfileViewModel = viewModel()
+    profileViewModel: ProfileViewModel = viewModel(),
+    loginViewModel: LoginViewModel = viewModel()
 ) {
     val uiState by profileViewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(profileViewModel) {
         profileViewModel.loadUserProfile()
@@ -66,6 +70,7 @@ fun ProfileScreen(
                 onUploadPhoto = { uri -> profileViewModel.uploadProfileImage(uri) },
                 onLogout = {
                     profileViewModel.logoutUser()
+                    loginViewModel.signOutGoogle()
                     mainNavController.navigate("login") {
                         popUpTo(mainNavController.graph.id) { inclusive = true }
                     }

@@ -14,6 +14,11 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import com.example.athlos.utils.await
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import com.example.athlos.NotificationScheduler
+import java.util.Calendar
+
 
 data class WaterUiState(
     val aguaAtual: Int = 0,
@@ -25,8 +30,9 @@ data class WaterUiState(
 )
 
 class WaterViewModel(
-    private val authRepository: AuthRepository = FirebaseAuthRepository(FirebaseAuth.getInstance(), FirebaseFirestore.getInstance())
-) : ViewModel() {
+    application: Application,
+    private val authRepository: AuthRepository
+) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(WaterUiState())
     val uiState: StateFlow<WaterUiState> = _uiState.asStateFlow()
@@ -60,8 +66,14 @@ class WaterViewModel(
                         finalAguaMeta = metaCalculada
                         saveWaterData(0, finalAguaMeta, today)
                         Log.d("WaterViewModel", "Reset diário de água para 0ml. Nova meta: $finalAguaMeta ml. Nova data: $today")
+                        scheduleWaterReminder()
                     } else {
                         finalAguaMeta = metaCalculada
+                        if (currentWater > finalAguaMeta) {
+                            scheduleWaterReminder()
+                        } else {
+                            cancelWaterReminder()
+                        }
                     }
 
                     _uiState.value = _uiState.value.copy(
@@ -91,7 +103,18 @@ class WaterViewModel(
 
     fun addWater(amount: Int) {
         val newAguaAtual = _uiState.value.aguaAtual + amount
-        _uiState.value = _uiState.value.copy(aguaAtual = newAguaAtual, successMessage = null)
+
+        if (newAguaAtual > _uiState.value.aguaMeta) {
+            cancelWaterReminder()
+            _uiState.value = _uiState.value.copy(
+                aguaAtual = newAguaAtual,
+                successMessage = "Meta diária atingida! Lembretes desativados por hoje."
+            )
+        } else {
+            scheduleWaterReminder()
+            _uiState.value = _uiState.value.copy(aguaAtual = newAguaAtual, successMessage = null)
+        }
+
         saveWaterData(newAguaAtual, _uiState.value.aguaMeta, _uiState.value.lastResetDate)
     }
 
@@ -124,6 +147,33 @@ class WaterViewModel(
                 }
             }
         }
+    }
+
+    companion object {
+        val WATER_REMINDER_NOTIFICATION_ID = NotificationScheduler.CUSTOM_NOTIFICATION_ID_BASE + 1
+    }
+
+    // Função para agendar o lembrete de água para a próxima hora
+    private fun scheduleWaterReminder() {
+        val context = getApplication<Application>().applicationContext
+        NotificationScheduler.createNotificationChannel(context)
+        val triggerTime = Calendar.getInstance().apply {
+            add(Calendar.HOUR_OF_DAY, 1)
+        }.timeInMillis
+
+        NotificationScheduler.scheduleNotification(
+            context = context,
+            title = "Hora de se hidratar! 💧",
+            message = "Lembre-se de beber água para atingir sua meta diária.",
+            triggerAtMillis = triggerTime,
+            notificationId = WATER_REMINDER_NOTIFICATION_ID
+        )
+    }
+
+    // Função para cancelar o lembrete de água
+    private fun cancelWaterReminder() {
+        val context = getApplication<Application>().applicationContext
+        NotificationScheduler.cancelNotification(context, WATER_REMINDER_NOTIFICATION_ID)
     }
 
     fun clearMessages() {

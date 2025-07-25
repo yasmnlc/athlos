@@ -1,5 +1,6 @@
 package com.example.athlos.ui.screens
 
+import android.app.Application
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -12,19 +13,29 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.athlos.data.repository.FirebaseAuthRepository
 import com.example.athlos.viewmodels.WaterViewModel
+import com.example.athlos.viewmodels.WaterViewModelFactory
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlin.math.sin
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WaterScreen(
-    waterViewModel: WaterViewModel = viewModel()
-) {
+fun WaterScreen() {
+    val context = LocalContext.current
+    val application = context.applicationContext as Application
+    val authRepository = FirebaseAuthRepository(FirebaseAuth.getInstance(), FirebaseFirestore.getInstance())
+
+    val factory = WaterViewModelFactory(application, authRepository)
+
+    val waterViewModel: WaterViewModel = viewModel(factory = factory)
     val uiState by waterViewModel.uiState.collectAsState()
 
     val waveShiftAnim = rememberInfiniteTransition()
