@@ -5,7 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.athlos.api.ExerciseDbService
 import com.example.athlos.api.YouTubeService
+import com.example.athlos.data.repository.ExerciseRepository
+import com.example.athlos.data.repository.FirestoreExerciseRepository
 import com.example.athlos.ui.models.Exercise
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -21,7 +24,10 @@ data class ExerciseUiState(
     val errorMessage: String? = null
 )
 
-class ExerciseViewModel : ViewModel() {
+class ExerciseViewModel(
+    // Injetando o repositório para interagir com o Firestore
+    private val exerciseRepository: ExerciseRepository = FirestoreExerciseRepository(FirebaseFirestore.getInstance())
+) : ViewModel() {
 
     private val exerciseDbApiKey = "69a1f86bdfmsh0a6e1a654dae000p197607jsn6acb47efc61e"
     private val youTubeApiKey = "AIzaSyDF71ScCOEuw-sm9qAlAIJ7vF-X79mt978"
@@ -33,25 +39,54 @@ class ExerciseViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
-                // Passo 1: Busca os exercícios da ExerciseDB
-                val originalExercises = ExerciseDbService.api.getExercisesByBodyPart(
-                    bodyPart = bodyPart.lowercase(),
-                    apiKey = exerciseDbApiKey
-                )
+                // 1. Tenta buscar a lista de exercícios do cache (Firestore) primeiro
+                var exercisesFromCache = exerciseRepository.getExercisesByBodyPart(bodyPart.lowercase())
 
-                // Passo 2: Para cada exercício, busca o vídeo no YouTube usando o nome em inglês
+                // 2. CACHE MISS: Se a lista do cache estiver vazia, busca na API
+                if (exercisesFromCache.isEmpty()) {
+                    Log.d("ExerciseVM", "Cache MISS para bodyPart '$bodyPart'. Buscando na API...")
+                    val exercisesFromApi = ExerciseDbService.api.getExercisesByBodyPart(
+                        bodyPart = bodyPart.lowercase(),
+                        apiKey = exerciseDbApiKey
+                    )
+
+                    // 3. Salva cada exercício da API no cache do Firestore
+                    exercisesFromApi.forEach { exercise ->
+                        exerciseRepository.saveExercise(exercise)
+                    }
+                    Log.d("ExerciseVM", "${exercisesFromApi.size} exercícios para '$bodyPart' salvos no cache.")
+                    exercisesFromCache = exercisesFromApi
+                } else {
+                    Log.d("ExerciseVM", "Cache HIT para bodyPart '$bodyPart'. ${exercisesFromCache.size} exercícios carregados do Firestore.")
+                }
+
+                // 4. Lógica de Cache para Vídeos do YouTube
                 val exercisesWithVideos = coroutineScope {
-                    originalExercises.map { exercise ->
+                    exercisesFromCache.map { exercise ->
                         async {
-                            val videoId = findYouTubeVideoId(exercise.name)
-                            exercise.copy(videoId = videoId)
+                            // 5. Se o vídeo não estiver no cache (videoId é nulo), busca na API do YouTube
+                            if (exercise.videoId == null) {
+                                Log.d("ExerciseVM", "YouTube Cache MISS para '${exercise.name}'. Buscando vídeo...")
+                                val videoId = findYouTubeVideoId(exercise.name)
+                                if (videoId != null) {
+                                    // 6. Atualiza o exercício com o ID do vídeo e salva de volta no cache
+                                    val updatedExercise = exercise.copy(videoId = videoId)
+                                    exerciseRepository.saveExercise(updatedExercise)
+                                    updatedExercise // Retorna o exercício atualizado
+                                } else {
+                                    exercise // Retorna o original se não encontrar vídeo
+                                }
+                            } else {
+                                Log.d("ExerciseVM", "YouTube Cache HIT para '${exercise.name}'.")
+                                exercise // Retorna o exercício do cache que já tem o vídeo
+                            }
                         }
                     }.awaitAll()
                 }
 
                 _uiState.update { it.copy(isLoading = false, exerciseList = exercisesWithVideos) }
             } catch (e: Exception) {
-                Log.e("ExerciseViewModel", "Erro CRÍTICO no processo de busca", e)
+                Log.e("ExerciseViewModel", "Erro CRÍTICO no processo de busca para '$bodyPart'", e)
                 _uiState.update {
                     it.copy(isLoading = false, errorMessage = "Falha ao carregar exercícios: ${e.message}")
                 }

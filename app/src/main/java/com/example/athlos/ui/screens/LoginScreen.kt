@@ -21,11 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.airbnb.lottie.compose.LottieCompositionSpec
-import com.airbnb.lottie.compose.LottieConstants
-import com.airbnb.lottie.compose.animateLottieCompositionAsState
-import com.airbnb.lottie.compose.rememberLottieComposition
-import com.example.athlos.viewmodels.LoginViewModel 
+import com.example.athlos.viewmodels.LoginViewModel
 import com.example.athlos.ui.screens.defaultTextFieldColors
 import com.example.athlos.viewmodels.LoginUiState
 import com.google.android.gms.auth.api.signin.GoogleSignIn

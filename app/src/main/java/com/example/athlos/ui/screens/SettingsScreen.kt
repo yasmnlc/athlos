@@ -43,20 +43,23 @@ import com.google.gson.reflect.TypeToken
 import android.content.Intent
 import android.provider.Settings
 import android.net.Uri
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import java.text.SimpleDateFormat
+import java.util.*
 
+// DataStore and Keys
 val Context.dataStore by preferencesDataStore(name = "settings")
 val DARK_MODE_KEY = booleanPreferencesKey("dark_mode")
 val ANIMATIONS_ENABLED_KEY = booleanPreferencesKey("animations_enabled")
 val NOTIFICATIONS_ENABLED_KEY = booleanPreferencesKey("notifications_enabled")
 val TRAINING_REMINDER_ENABLED_KEY = booleanPreferencesKey("training_reminder_enabled")
 val WATER_REMINDER_ENABLED_KEY = booleanPreferencesKey("water_reminder_enabled")
-
 val MEAL_BREAKFAST_REMINDER_ENABLED_KEY = booleanPreferencesKey("meal_breakfast_reminder_enabled")
 val MEAL_LUNCH_REMINDER_ENABLED_KEY = booleanPreferencesKey("meal_lunch_reminder_enabled")
 val MEAL_DINNER_REMINDER_ENABLED_KEY = booleanPreferencesKey("meal_dinner_reminder_enabled")
 val MEAL_SNACKS_REMINDER_ENABLED_KEY = booleanPreferencesKey("meal_snacks_reminder_enabled")
-
 val MEAL_BREAKFAST_HOUR_KEY = intPreferencesKey("meal_breakfast_hour")
 val MEAL_BREAKFAST_MINUTE_KEY = intPreferencesKey("meal_breakfast_minute")
 val MEAL_LUNCH_HOUR_KEY = intPreferencesKey("meal_lunch_hour")
@@ -65,14 +68,26 @@ val MEAL_DINNER_HOUR_KEY = intPreferencesKey("meal_dinner_hour")
 val MEAL_DINNER_MINUTE_KEY = intPreferencesKey("meal_dinner_minute")
 val MEAL_SNACKS_HOUR_KEY = intPreferencesKey("meal_snacks_hour")
 val MEAL_SNACKS_MINUTE_KEY = intPreferencesKey("meal_snacks_minute")
-
 val CUSTOM_NOTIFICATIONS_KEY = stringPreferencesKey("custom_notifications")
 
+// Notification IDs
+private const val WATER_REMINDER_ID = 2
+private const val MEAL_BREAKFAST_ID = 3
+private const val MEAL_LUNCH_ID = 4
+private const val MEAL_DINNER_ID = 5
+private const val MEAL_SNACKS_ID = 6
+private const val TRAINING_REMINDER_ID_7AM = 101
+private const val TRAINING_REMINDER_ID_12PM = 102
+private const val TRAINING_REMINDER_ID_3PM = 103
+private const val TRAINING_REMINDER_ID_6PM = 104
+
+// UPDATED Data Class to include days of the week
 data class CustomNotification(
     val id: Int,
     val message: String,
     val hour: Int,
     val minute: Int,
+    val daysOfWeek: Set<Int> = emptySet(), // e.g., {Calendar.MONDAY, Calendar.WEDNESDAY}
     val enabled: Boolean = true
 )
 
@@ -87,6 +102,7 @@ fun SettingsScreen() {
         onDispose {}
     }
 
+    // State collection from DataStore
     val darkModeEnabled by context.dataStore.data.map { preferences ->
         preferences[DARK_MODE_KEY] ?: false
     }.collectAsState(initial = false)
@@ -139,10 +155,13 @@ fun SettingsScreen() {
     val snacksHour by context.dataStore.data.map { it[MEAL_SNACKS_HOUR_KEY] ?: 16 }.collectAsState(initial = 16)
     val snacksMinute by context.dataStore.data.map { it[MEAL_SNACKS_MINUTE_KEY] ?: 0 }.collectAsState(initial = 0)
 
+    // State for custom notifications
     var customNotificationMessage by remember { mutableStateOf("") }
     var customNotificationHour by remember { mutableStateOf(defaultHour) }
     var customNotificationMinute by remember { mutableStateOf(defaultMinute) }
     var editingNotificationId by remember { mutableStateOf<Int?>(null) }
+    var selectedDays by remember { mutableStateOf<Set<Int>>(emptySet()) }
+
 
     val customNotifications = remember { mutableStateListOf<CustomNotification>() }
     LaunchedEffect(Unit) {
@@ -163,15 +182,18 @@ fun SettingsScreen() {
         }
     }
 
+    // Permission Launchers
     val requestPostNotificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
             handleScheduleCustomNotification(context, customNotifications, customNotificationMessage,
-                customNotificationHour, customNotificationMinute, editingNotificationId, saveCustomNotifications)
+                customNotificationHour, customNotificationMinute, selectedDays, editingNotificationId, saveCustomNotifications)
+            // Reset fields
             customNotificationMessage = ""
             customNotificationHour = defaultHour
             customNotificationMinute = defaultMinute
+            selectedDays = emptySet()
             editingNotificationId = null
         } else {
             Toast.makeText(context, "Permissão de notificação negada.", Toast.LENGTH_SHORT).show()
@@ -186,10 +208,12 @@ fun SettingsScreen() {
             if (alarmManager.canScheduleExactAlarms()) {
                 Toast.makeText(context, "Permissão de alarme exato concedida.", Toast.LENGTH_SHORT).show()
                 handleScheduleCustomNotification(context, customNotifications, customNotificationMessage,
-                    customNotificationHour, customNotificationMinute, editingNotificationId, saveCustomNotifications)
+                    customNotificationHour, customNotificationMinute, selectedDays, editingNotificationId, saveCustomNotifications)
+                // Reset fields
                 customNotificationMessage = ""
                 customNotificationHour = defaultHour
                 customNotificationMinute = defaultMinute
+                selectedDays = emptySet()
                 editingNotificationId = null
             } else {
                 Toast.makeText(context, "Permissão de alarme exato ainda não concedida.", Toast.LENGTH_SHORT).show()
@@ -197,6 +221,7 @@ fun SettingsScreen() {
         }
     }
 
+    // Main Column
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -210,6 +235,7 @@ fun SettingsScreen() {
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
+        // --- Preferences Section ---
         Text(
             text = "Preferências",
             fontSize = 20.sp,
@@ -244,6 +270,7 @@ fun SettingsScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // --- Notifications Section ---
         Text(
             text = "Notificações",
             fontSize = 20.sp,
@@ -252,6 +279,7 @@ fun SettingsScreen() {
         )
         Divider(modifier = Modifier.padding(bottom = 16.dp))
 
+        // MASTER NOTIFICATION SWITCH
         PreferenceSwitchRow(
             title = "Notificações Gerais",
             checked = notificationsEnabled,
@@ -259,14 +287,49 @@ fun SettingsScreen() {
                 scope.launch {
                     context.dataStore.edit { preferences ->
                         preferences[NOTIFICATIONS_ENABLED_KEY] = isChecked
+                        // If master switch is turned OFF, turn off all other notifications
+                        if (!isChecked) {
+                            preferences[TRAINING_REMINDER_ENABLED_KEY] = false
+                            preferences[WATER_REMINDER_ENABLED_KEY] = false
+                            preferences[MEAL_BREAKFAST_REMINDER_ENABLED_KEY] = false
+                            preferences[MEAL_LUNCH_REMINDER_ENABLED_KEY] = false
+                            preferences[MEAL_DINNER_REMINDER_ENABLED_KEY] = false
+                            preferences[MEAL_SNACKS_REMINDER_ENABLED_KEY] = false
+
+                            // Cancel all hardcoded notifications
+                            NotificationScheduler.cancelNotification(context, TRAINING_REMINDER_ID_7AM)
+                            NotificationScheduler.cancelNotification(context, TRAINING_REMINDER_ID_12PM)
+                            NotificationScheduler.cancelNotification(context, TRAINING_REMINDER_ID_3PM)
+                            NotificationScheduler.cancelNotification(context, TRAINING_REMINDER_ID_6PM)
+                            NotificationScheduler.cancelNotification(context, WATER_REMINDER_ID)
+                            NotificationScheduler.cancelNotification(context, MEAL_BREAKFAST_ID)
+                            NotificationScheduler.cancelNotification(context, MEAL_LUNCH_ID)
+                            NotificationScheduler.cancelNotification(context, MEAL_DINNER_ID)
+                            NotificationScheduler.cancelNotification(context, MEAL_SNACKS_ID)
+
+                            // Disable and cancel all custom notifications
+                            val jsonString = preferences[CUSTOM_NOTIFICATIONS_KEY] ?: "[]"
+                            val listType = object : TypeToken<List<CustomNotification>>() {}.type
+                            val currentList = Gson().fromJson<List<CustomNotification>>(jsonString, listType)
+                            val updatedList = currentList.map { it.copy(enabled = false) }
+                            updatedList.forEach { notification ->
+                                NotificationScheduler.cancelNotification(context, notification.id)
+                            }
+                            preferences[CUSTOM_NOTIFICATIONS_KEY] = Gson().toJson(updatedList)
+                        }
+                    }
+                    if (!isChecked) {
+                        Toast.makeText(context, "Todas as notificações foram desativadas.", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
         )
 
+        // UPDATED TRAINING REMINDER
         PreferenceSwitchRow(
             title = "Lembrar de Treinar",
             checked = trainingReminderEnabled,
+            enabled = notificationsEnabled,
             onCheckedChange = { isChecked ->
                 scope.launch {
                     context.dataStore.edit { preferences ->
@@ -274,17 +337,27 @@ fun SettingsScreen() {
                     }
                 }
                 if (isChecked) {
-                    scheduleUserNotification(context, "É hora do seu treino com o Athlos!", 18, 0, 1, "Lembrete de Treino Athlos")
+                    val message = "Já foi treinar hoje? No pain no gain, brother"
+                    val title = "Lembrete de Treino Athlos"
+                    scheduleDailyNotification(context, message, 7, 0, TRAINING_REMINDER_ID_7AM, title)
+                    scheduleDailyNotification(context, message, 12, 0, TRAINING_REMINDER_ID_12PM, title)
+                    scheduleDailyNotification(context, message, 15, 0, TRAINING_REMINDER_ID_3PM, title)
+                    scheduleDailyNotification(context, message, 18, 0, TRAINING_REMINDER_ID_6PM, title)
+                    Toast.makeText(context, "Lembretes de treino ativados para 07:00, 12:00, 15:00 e 18:00.", Toast.LENGTH_LONG).show()
                 } else {
-                    NotificationScheduler.cancelNotification(context, 1)
+                    NotificationScheduler.cancelNotification(context, TRAINING_REMINDER_ID_7AM)
+                    NotificationScheduler.cancelNotification(context, TRAINING_REMINDER_ID_12PM)
+                    NotificationScheduler.cancelNotification(context, TRAINING_REMINDER_ID_3PM)
+                    NotificationScheduler.cancelNotification(context, TRAINING_REMINDER_ID_6PM)
+                    Toast.makeText(context, "Lembretes de treino desativados.", Toast.LENGTH_SHORT).show()
                 }
-                Toast.makeText(context, "Lembrete de Treino: ${if (isChecked) "Ativado" else "Desativado"}", Toast.LENGTH_SHORT).show()
             }
         )
 
         PreferenceSwitchRow(
             title = "Lembrar de Beber Água",
             checked = waterReminderEnabled,
+            enabled = notificationsEnabled,
             onCheckedChange = { isChecked ->
                 scope.launch {
                     context.dataStore.edit { preferences ->
@@ -292,11 +365,12 @@ fun SettingsScreen() {
                     }
                 }
                 if (isChecked) {
-                    scheduleUserNotification(context, "Não se esqueça de se hidratar com o Athlos!", 8, 0, 2, "Lembrete de Água Athlos")
+                    scheduleDailyNotification(context, "Não se esqueça de se hidratar com o Athlos!", 8, 0, WATER_REMINDER_ID, "Lembrete de Água Athlos")
+                    Toast.makeText(context, "Lembrete de Beber Água Ativado", Toast.LENGTH_SHORT).show()
                 } else {
-                    NotificationScheduler.cancelNotification(context, 2)
+                    NotificationScheduler.cancelNotification(context, WATER_REMINDER_ID)
+                    Toast.makeText(context, "Lembrete de Beber Água Desativado", Toast.LENGTH_SHORT).show()
                 }
-                Toast.makeText(context, "Lembrete de Beber Água: ${if (isChecked) "Ativado" else "Desativado"}", Toast.LENGTH_SHORT).show()
             }
         )
 
@@ -307,128 +381,134 @@ fun SettingsScreen() {
             modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
         )
 
+        // --- Meal Notifications ---
         MealNotificationSetting(
             title = "Café da Manhã",
             enabled = mealBreakfastReminderEnabled,
+            masterSwitchEnabled = notificationsEnabled,
             hour = breakfastHour,
             minute = breakfastMinute,
             onToggle = { isChecked ->
                 scope.launch {
-                    context.dataStore.edit { preferences ->
-                        preferences[MEAL_BREAKFAST_REMINDER_ENABLED_KEY] = isChecked
-                    }
+                    context.dataStore.edit { p -> p[MEAL_BREAKFAST_REMINDER_ENABLED_KEY] = isChecked }
                 }
                 if (isChecked) {
-                    scheduleUserNotification(context, "Hora do café da manhã com o Athlos!", breakfastHour, breakfastMinute, 3, "Lembrete de Refeição Athlos")
+                    scheduleDailyNotification(context, "Hora do café da manhã com o Athlos!", breakfastHour, breakfastMinute, MEAL_BREAKFAST_ID, "Lembrete de Refeição Athlos")
                 } else {
-                    NotificationScheduler.cancelNotification(context, 3)
+                    NotificationScheduler.cancelNotification(context, MEAL_BREAKFAST_ID)
                 }
+                Toast.makeText(context, "Lembrete de Café da Manhã ${if (isChecked) "ativado" else "desativado"}", Toast.LENGTH_SHORT).show()
             },
             onTimeSelected = { newHour, newMinute ->
                 scope.launch {
-                    context.dataStore.edit { preferences ->
-                        preferences[MEAL_BREAKFAST_HOUR_KEY] = newHour
-                        preferences[MEAL_BREAKFAST_MINUTE_KEY] = newMinute
+                    context.dataStore.edit { p ->
+                        p[MEAL_BREAKFAST_HOUR_KEY] = newHour
+                        p[MEAL_BREAKFAST_MINUTE_KEY] = newMinute
                     }
                 }
                 if (mealBreakfastReminderEnabled) {
-                    scheduleUserNotification(context, "Hora do café da manhã com o Athlos!", newHour, newMinute, 3, "Lembrete de Refeição Athlos")
+                    scheduleDailyNotification(context, "Hora do café da manhã com o Athlos!", newHour, newMinute, MEAL_BREAKFAST_ID, "Lembrete de Refeição Athlos")
                 }
+                Toast.makeText(context, "Horário do Café da Manhã atualizado para %02d:%02d".format(newHour, newMinute), Toast.LENGTH_SHORT).show()
             }
         )
 
         MealNotificationSetting(
             title = "Almoço",
             enabled = mealLunchReminderEnabled,
+            masterSwitchEnabled = notificationsEnabled,
             hour = lunchHour,
             minute = lunchMinute,
             onToggle = { isChecked ->
                 scope.launch {
-                    context.dataStore.edit { preferences ->
-                        preferences[MEAL_LUNCH_REMINDER_ENABLED_KEY] = isChecked
-                    }
+                    context.dataStore.edit { p -> p[MEAL_LUNCH_REMINDER_ENABLED_KEY] = isChecked }
                 }
                 if (isChecked) {
-                    scheduleUserNotification(context, "Hora do almoço com o Athlos!", lunchHour, lunchMinute, 4, "Lembrete de Refeição Athlos")
+                    scheduleDailyNotification(context, "Hora do almoço com o Athlos!", lunchHour, lunchMinute, MEAL_LUNCH_ID, "Lembrete de Refeição Athlos")
                 } else {
-                    NotificationScheduler.cancelNotification(context, 4)
+                    NotificationScheduler.cancelNotification(context, MEAL_LUNCH_ID)
                 }
+                Toast.makeText(context, "Lembrete de Almoço ${if (isChecked) "ativado" else "desativado"}", Toast.LENGTH_SHORT).show()
             },
             onTimeSelected = { newHour, newMinute ->
                 scope.launch {
-                    context.dataStore.edit { preferences ->
-                        preferences[MEAL_LUNCH_HOUR_KEY] = newHour
-                        preferences[MEAL_LUNCH_MINUTE_KEY] = newMinute
+                    context.dataStore.edit { p ->
+                        p[MEAL_LUNCH_HOUR_KEY] = newHour
+                        p[MEAL_LUNCH_MINUTE_KEY] = newMinute
                     }
                 }
                 if (mealLunchReminderEnabled) {
-                    scheduleUserNotification(context, "Hora do almoço com o Athlos!", newHour, newMinute, 4, "Lembrete de Refeição Athlos")
+                    scheduleDailyNotification(context, "Hora do almoço com o Athlos!", newHour, newMinute, MEAL_LUNCH_ID, "Lembrete de Refeição Athlos")
                 }
+                Toast.makeText(context, "Horário do Almoço atualizado para %02d:%02d".format(newHour, newMinute), Toast.LENGTH_SHORT).show()
             }
         )
 
         MealNotificationSetting(
             title = "Jantar",
             enabled = mealDinnerReminderEnabled,
+            masterSwitchEnabled = notificationsEnabled,
             hour = dinnerHour,
             minute = dinnerMinute,
             onToggle = { isChecked ->
                 scope.launch {
-                    context.dataStore.edit { preferences ->
-                        preferences[MEAL_DINNER_REMINDER_ENABLED_KEY] = isChecked
-                    }
+                    context.dataStore.edit { p -> p[MEAL_DINNER_REMINDER_ENABLED_KEY] = isChecked }
                 }
                 if (isChecked) {
-                    scheduleUserNotification(context, "Hora do jantar com o Athlos!", dinnerHour, dinnerMinute, 5, "Lembrete de Refeição Athlos")
+                    scheduleDailyNotification(context, "Hora do jantar com o Athlos!", dinnerHour, dinnerMinute, MEAL_DINNER_ID, "Lembrete de Refeição Athlos")
                 } else {
-                    NotificationScheduler.cancelNotification(context, 5)
+                    NotificationScheduler.cancelNotification(context, MEAL_DINNER_ID)
                 }
+                Toast.makeText(context, "Lembrete de Jantar ${if (isChecked) "ativado" else "desativado"}", Toast.LENGTH_SHORT).show()
             },
             onTimeSelected = { newHour, newMinute ->
                 scope.launch {
-                    context.dataStore.edit { preferences ->
-                        preferences[MEAL_DINNER_HOUR_KEY] = newHour
-                        preferences[MEAL_DINNER_MINUTE_KEY] = newMinute
+                    context.dataStore.edit { p ->
+                        p[MEAL_DINNER_HOUR_KEY] = newHour
+                        p[MEAL_DINNER_MINUTE_KEY] = newMinute
                     }
                 }
                 if (mealDinnerReminderEnabled) {
-                    scheduleUserNotification(context, "Hora do jantar com o Athlos!", newHour, newMinute, 5, "Lembrete de Refeição Athlos")
+                    scheduleDailyNotification(context, "Hora do jantar com o Athlos!", newHour, newMinute, MEAL_DINNER_ID, "Lembrete de Refeição Athlos")
                 }
+                Toast.makeText(context, "Horário do Jantar atualizado para %02d:%02d".format(newHour, newMinute), Toast.LENGTH_SHORT).show()
             }
         )
 
         MealNotificationSetting(
             title = "Lanches/Outros",
             enabled = mealSnacksReminderEnabled,
+            masterSwitchEnabled = notificationsEnabled,
             hour = snacksHour,
             minute = snacksMinute,
             onToggle = { isChecked ->
                 scope.launch {
-                    context.dataStore.edit { preferences ->
-                        preferences[MEAL_SNACKS_REMINDER_ENABLED_KEY] = isChecked
-                    }
+                    context.dataStore.edit { p -> p[MEAL_SNACKS_REMINDER_ENABLED_KEY] = isChecked }
                 }
                 if (isChecked) {
-                    scheduleUserNotification(context, "Hora do lanche com o Athlos!", snacksHour, snacksMinute, 6, "Lembrete de Refeição Athlos")
+                    scheduleDailyNotification(context, "Hora do lanche com o Athlos!", snacksHour, snacksMinute, MEAL_SNACKS_ID, "Lembrete de Refeição Athlos")
                 } else {
-                    NotificationScheduler.cancelNotification(context, 6)
+                    NotificationScheduler.cancelNotification(context, MEAL_SNACKS_ID)
                 }
+                Toast.makeText(context, "Lembrete de Lanche ${if (isChecked) "ativado" else "desativado"}", Toast.LENGTH_SHORT).show()
             },
             onTimeSelected = { newHour, newMinute ->
                 scope.launch {
-                    context.dataStore.edit { preferences ->
-                        preferences[MEAL_SNACKS_HOUR_KEY] = newHour
-                        preferences[MEAL_SNACKS_MINUTE_KEY] = newMinute
+                    context.dataStore.edit { p ->
+                        p[MEAL_SNACKS_HOUR_KEY] = newHour
+                        p[MEAL_SNACKS_MINUTE_KEY] = newMinute
                     }
                 }
                 if (mealSnacksReminderEnabled) {
-                    scheduleUserNotification(context, "Hora do lanche com o Athlos!", newHour, newMinute, 6, "Lembrete de Refeição Athlos")
+                    scheduleDailyNotification(context, "Hora do lanche com o Athlos!", newHour, newMinute, MEAL_SNACKS_ID, "Lembrete de Refeição Athlos")
                 }
+                Toast.makeText(context, "Horário do Lanche atualizado para %02d:%02d".format(newHour, newMinute), Toast.LENGTH_SHORT).show()
             }
         )
 
         Divider(modifier = Modifier.padding(vertical = 16.dp))
 
+        // --- Custom Notifications Section ---
         Text(
             text = "Agendar Notificação Personalizada",
             fontSize = 18.sp,
@@ -441,16 +521,18 @@ fun SettingsScreen() {
             onValueChange = { customNotificationMessage = it },
             label = { Text("Mensagem da Notificação") },
             leadingIcon = { Icons.Default.Message.let { Icon(it, contentDescription = "Mensagem") } },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = notificationsEnabled
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Time Picker Button
         Button(
             onClick = {
                 val timePickerDialog = TimePickerDialog(
                     context,
-                    { _: TimePicker, selectedHour: Int, selectedMinute: Int ->
+                    { _, selectedHour: Int, selectedMinute: Int ->
                         customNotificationHour = selectedHour
                         customNotificationMinute = selectedMinute
                         Toast.makeText(context, "Horário selecionado: %02d:%02d".format(selectedHour, selectedMinute), Toast.LENGTH_SHORT).show()
@@ -458,7 +540,8 @@ fun SettingsScreen() {
                 )
                 timePickerDialog.show()
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = notificationsEnabled
         ) {
             Icon(Icons.Default.Schedule, contentDescription = "Selecionar Horário")
             Spacer(Modifier.width(8.dp))
@@ -467,6 +550,22 @@ fun SettingsScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Day of Week Picker
+        DayOfWeekSelector(
+            selectedDays = selectedDays,
+            onDaySelected = { day ->
+                selectedDays = if (selectedDays.contains(day)) {
+                    selectedDays - day
+                } else {
+                    selectedDays + day
+                }
+            },
+            enabled = notificationsEnabled
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Add/Update Notification Button
         Button(
             onClick = {
                 if (customNotificationMessage.isBlank()) {
@@ -494,10 +593,12 @@ fun SettingsScreen() {
                             Manifest.permission.POST_NOTIFICATIONS
                         ) == PackageManager.PERMISSION_GRANTED -> {
                             handleScheduleCustomNotification(context, customNotifications, customNotificationMessage,
-                                customNotificationHour, customNotificationMinute, editingNotificationId, saveCustomNotifications)
+                                customNotificationHour, customNotificationMinute, selectedDays, editingNotificationId, saveCustomNotifications)
+                            // Reset fields
                             customNotificationMessage = ""
                             customNotificationHour = defaultHour
                             customNotificationMinute = defaultMinute
+                            selectedDays = emptySet()
                             editingNotificationId = null
                         }
                         else -> {
@@ -506,14 +607,17 @@ fun SettingsScreen() {
                     }
                 } else {
                     handleScheduleCustomNotification(context, customNotifications, customNotificationMessage,
-                        customNotificationHour, customNotificationMinute, editingNotificationId, saveCustomNotifications)
+                        customNotificationHour, customNotificationMinute, selectedDays, editingNotificationId, saveCustomNotifications)
+                    // Reset fields
                     customNotificationMessage = ""
                     customNotificationHour = defaultHour
                     customNotificationMinute = defaultMinute
+                    selectedDays = emptySet()
                     editingNotificationId = null
                 }
             },
             modifier = Modifier.fillMaxWidth(),
+            enabled = notificationsEnabled,
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
             Icon(Icons.Default.Add, contentDescription = "Adicionar Notificação")
@@ -523,6 +627,7 @@ fun SettingsScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // List of Custom Notifications
         if (customNotifications.isNotEmpty()) {
             Text(
                 text = "Minhas Notificações Personalizadas",
@@ -536,16 +641,19 @@ fun SettingsScreen() {
                 customNotifications.sortedWith(compareBy<CustomNotification> { it.hour }.thenBy { it.minute })
             }
 
-            sortedCustomNotifications.forEachIndexed { index, notification ->
+            sortedCustomNotifications.forEach { notification ->
                 CustomNotificationItem(
                     notification = notification,
+                    masterSwitchEnabled = notificationsEnabled,
                     onEdit = {
                         customNotificationMessage = notification.message
                         customNotificationHour = notification.hour
                         customNotificationMinute = notification.minute
+                        selectedDays = notification.daysOfWeek
                         editingNotificationId = notification.id
+                        // Remove the old notification before editing
                         val updatedList = customNotifications.toMutableList()
-                        updatedList.removeAt(customNotifications.indexOf(notification))
+                        updatedList.remove(notification)
                         saveCustomNotifications(updatedList)
                         NotificationScheduler.cancelNotification(context, notification.id)
                         Toast.makeText(context, "Notificação carregada para edição.", Toast.LENGTH_SHORT).show()
@@ -567,9 +675,7 @@ fun SettingsScreen() {
                         saveCustomNotifications(updatedList)
 
                         if (isChecked) {
-                            scheduleUserNotification(context, updatedNotification.message,
-                                updatedNotification.hour, updatedNotification.minute,
-                                updatedNotification.id, "Lembrete Athlos Personalizado")
+                            scheduleCustomNotification(context, updatedNotification)
                             Toast.makeText(context, "Notificação ativada.", Toast.LENGTH_SHORT).show()
                         } else {
                             NotificationScheduler.cancelNotification(context, updatedNotification.id)
@@ -583,8 +689,15 @@ fun SettingsScreen() {
     }
 }
 
+// --- Reusable Composables ---
+
 @Composable
-fun PreferenceSwitchRow(title: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+fun PreferenceSwitchRow(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -592,8 +705,11 @@ fun PreferenceSwitchRow(title: String, checked: Boolean, onCheckedChange: (Boole
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(title)
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Text(
+            text = title,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        )
+        Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
     }
 }
 
@@ -601,12 +717,14 @@ fun PreferenceSwitchRow(title: String, checked: Boolean, onCheckedChange: (Boole
 fun MealNotificationSetting(
     title: String,
     enabled: Boolean,
+    masterSwitchEnabled: Boolean,
     hour: Int,
     minute: Int,
     onToggle: (Boolean) -> Unit,
     onTimeSelected: (Int, Int) -> Unit
 ) {
     val context = LocalContext.current
+    val itemIsEnabled = enabled && masterSwitchEnabled
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -615,29 +733,31 @@ fun MealNotificationSetting(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title)
+            Text(
+                text = title,
+                color = if (masterSwitchEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+            )
             Spacer(Modifier.height(4.dp))
             Text(
                 text = String.format("Horário: %02d:%02d", hour, minute),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                color = if (masterSwitchEnabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
             )
         }
         Spacer(Modifier.width(8.dp))
-        Switch(checked = enabled, onCheckedChange = onToggle)
+        Switch(checked = enabled, onCheckedChange = onToggle, enabled = masterSwitchEnabled)
         Spacer(Modifier.width(8.dp))
         Button(
             onClick = {
                 val timePickerDialog = TimePickerDialog(
                     context,
-                    { _: TimePicker, selectedHour: Int, selectedMinute: Int ->
+                    { _, selectedHour: Int, selectedMinute: Int ->
                         onTimeSelected(selectedHour, selectedMinute)
-                        Toast.makeText(context, "Horário ${title} selecionado: %02d:%02d".format(selectedHour, selectedMinute), Toast.LENGTH_SHORT).show()
                     }, hour, minute, true
                 )
                 timePickerDialog.show()
             },
-            enabled = enabled,
+            enabled = itemIsEnabled,
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
         ) {
             Icon(Icons.Default.Schedule, contentDescription = "Definir Horário")
@@ -645,53 +765,116 @@ fun MealNotificationSetting(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DayOfWeekSelector(
+    selectedDays: Set<Int>,
+    onDaySelected: (Int) -> Unit,
+    enabled: Boolean
+) {
+    val days = listOf(
+        "D" to Calendar.SUNDAY,
+        "S" to Calendar.MONDAY,
+        "T" to Calendar.TUESDAY,
+        "Q" to Calendar.WEDNESDAY,
+        "Q" to Calendar.THURSDAY,
+        "S" to Calendar.FRIDAY,
+        "S" to Calendar.SATURDAY
+    )
+
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        items(days.withIndex().toList()) { (index, dayInfo) ->
+            val (label, day) = dayInfo
+            val uniqueLabel = when(index) {
+                3 -> "Qua"
+                4 -> "Qui"
+                5 -> "Sex"
+                6 -> "Sáb"
+                0 -> "Dom"
+                1 -> "Seg"
+                2 -> "Ter"
+                else -> label
+            }
+            FilterChip(
+                selected = selectedDays.contains(day),
+                onClick = { onDaySelected(day) },
+                label = { Text(uniqueLabel) },
+                enabled = enabled
+            )
+        }
+    }
+}
+
 @Composable
 fun CustomNotificationItem(
     notification: CustomNotification,
+    masterSwitchEnabled: Boolean,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onToggleEnabled: (Boolean) -> Unit
 ) {
+    val isEnabled = notification.enabled && masterSwitchEnabled
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .padding(16.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = notification.message,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (notification.enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = String.format("Horário: %02d:%02d", notification.hour, notification.minute),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (notification.enabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Message and Time
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = notification.message,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (isEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = String.format("Horário: %02d:%02d", notification.hour, notification.minute),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (isEnabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    )
+                }
+                // Action Buttons
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onEdit, enabled = masterSwitchEnabled) {
+                        Icon(Icons.Default.Edit, contentDescription = "Editar Notificação")
+                    }
+                    IconButton(onClick = onDelete, enabled = masterSwitchEnabled) {
+                        Icon(Icons.Default.Delete, contentDescription = "Remover Notificação")
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Switch(
+                        checked = notification.enabled,
+                        onCheckedChange = onToggleEnabled,
+                        enabled = masterSwitchEnabled
+                    )
+                }
             }
-            Row {
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, contentDescription = "Editar Notificação")
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "Remover Notificação")
-                }
-                Spacer(Modifier.width(8.dp))
-                Switch(
-                    checked = notification.enabled,
-                    onCheckedChange = onToggleEnabled
+            // Display Selected Days
+            if (notification.daysOfWeek.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Dias: ${formatSelectedDays(notification.daysOfWeek)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isEnabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                 )
             }
         }
     }
 }
+
+// --- Helper Functions ---
 
 private fun handleScheduleCustomNotification(
     context: Context,
@@ -699,6 +882,7 @@ private fun handleScheduleCustomNotification(
     message: String,
     hour: Int,
     minute: Int,
+    daysOfWeek: Set<Int>,
     editingId: Int?,
     saveCustomNotifications: (List<CustomNotification>) -> Unit
 ) {
@@ -708,6 +892,7 @@ private fun handleScheduleCustomNotification(
         message = message,
         hour = hour,
         minute = minute,
+        daysOfWeek = daysOfWeek,
         enabled = true
     )
 
@@ -715,6 +900,8 @@ private fun handleScheduleCustomNotification(
         val index = customNotifications.indexOfFirst { it.id == editingId }
         if (index != -1) {
             customNotifications[index] = newNotification
+        } else {
+            customNotifications.add(newNotification)
         }
         Toast.makeText(context, "Notificação personalizada atualizada!", Toast.LENGTH_SHORT).show()
     } else {
@@ -722,13 +909,65 @@ private fun handleScheduleCustomNotification(
         Toast.makeText(context, "Notificação personalizada agendada!", Toast.LENGTH_SHORT).show()
     }
 
-    saveCustomNotifications(customNotifications)
-
-    scheduleUserNotification(context, newNotification.message, newNotification.hour,
-        newNotification.minute, newNotification.id, "Lembrete Athlos Personalizado")
+    saveCustomNotifications(customNotifications.toList())
+    scheduleCustomNotification(context, newNotification)
 }
 
-private fun scheduleUserNotification(context: Context, message: String, hour: Int, minute: Int, notificationId: Int, title: String) {
+private fun scheduleCustomNotification(context: Context, notification: CustomNotification) {
+    val title = "Lembrete Athlos Personalizado"
+
+    // If no days are selected, schedule a one-time alarm
+    if (notification.daysOfWeek.isEmpty()) {
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, notification.hour)
+            set(Calendar.MINUTE, notification.minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
+        if (calendar.before(Calendar.getInstance())) {
+            calendar.add(Calendar.DAY_OF_YEAR, 1)
+        }
+
+        NotificationScheduler.scheduleNotification(
+            context,
+            title,
+            notification.message,
+            calendar.timeInMillis,
+            notification.id
+        )
+        Toast.makeText(context, "Notificação agendada para %02d:%02d!".format(notification.hour, notification.minute), Toast.LENGTH_LONG).show()
+    } else { // Schedule repeating alarms for the selected days
+        notification.daysOfWeek.forEach { dayOfWeek ->
+            val calendar = Calendar.getInstance().apply {
+                set(Calendar.DAY_OF_WEEK, dayOfWeek)
+                set(Calendar.HOUR_OF_DAY, notification.hour)
+                set(Calendar.MINUTE, notification.minute)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+
+            // If the time has already passed for this day, schedule it for next week
+            if (calendar.before(Calendar.getInstance())) {
+                calendar.add(Calendar.WEEK_OF_YEAR, 1)
+            }
+
+            // Generate a unique ID for each day's alarm to avoid collisions
+            val dailyNotificationId = notification.id + dayOfWeek
+
+            NotificationScheduler.scheduleRepeatingNotification(
+                context,
+                title,
+                notification.message,
+                calendar.timeInMillis,
+                dailyNotificationId
+            )
+        }
+        Toast.makeText(context, "Notificações recorrentes agendadas!", Toast.LENGTH_LONG).show()
+    }
+}
+
+private fun scheduleDailyNotification(context: Context, message: String, hour: Int, minute: Int, notificationId: Int, title: String) {
     val calendar = Calendar.getInstance().apply {
         set(Calendar.HOUR_OF_DAY, hour)
         set(Calendar.MINUTE, minute)
@@ -740,12 +979,22 @@ private fun scheduleUserNotification(context: Context, message: String, hour: In
         calendar.add(Calendar.DAY_OF_YEAR, 1)
     }
 
-    NotificationScheduler.scheduleNotification(
+    NotificationScheduler.scheduleRepeatingNotification(
         context,
         title,
         message,
         calendar.timeInMillis,
         notificationId
     )
-    Toast.makeText(context, "Notificação agendada para %02d:%02d!".format(hour, minute), Toast.LENGTH_LONG).show()
+}
+
+private fun formatSelectedDays(days: Set<Int>): String {
+    if (days.isEmpty()) return "Nenhum"
+    val sortedDays = days.sorted()
+    val locale = Locale("pt", "BR")
+    return sortedDays.joinToString(", ") { day ->
+        val cal = Calendar.getInstance()
+        cal.set(Calendar.DAY_OF_WEEK, day)
+        SimpleDateFormat("EEE", locale).format(cal.time).replaceFirstChar { it.uppercase() }
+    }
 }

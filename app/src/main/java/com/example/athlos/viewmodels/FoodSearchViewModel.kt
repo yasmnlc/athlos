@@ -12,7 +12,10 @@ import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
+import java.util.UUID
 
 class FoodSearchViewModel : ViewModel() {
 
@@ -26,6 +29,7 @@ class FoodSearchViewModel : ViewModel() {
         private set
 
     private val translator: Translator
+    private var searchJob: Job? = null // Job para controlar a busca com debounce
 
     init {
         val options = TranslatorOptions.Builder()
@@ -33,21 +37,13 @@ class FoodSearchViewModel : ViewModel() {
             .setTargetLanguage(TranslateLanguage.PORTUGUESE)
             .build()
         translator = Translation.getClient(options)
-
-        val conditions = DownloadConditions.Builder()
-            .requireWifi()
-            .build()
+        val conditions = DownloadConditions.Builder().requireWifi().build()
         translator.downloadModelIfNeeded(conditions)
             .addOnSuccessListener { Log.d("Translator", "Modelo de PT baixado com sucesso.") }
             .addOnFailureListener { e -> Log.e("Translator", "Erro ao baixar modelo de PT.", e) }
     }
 
     private suspend fun translateText(text: String): String {
-        val isLikelyEnglish = text.contains(Regex("[kKyYwW]")) || !text.contains(Regex("[çãõéáíóú]"))
-        if (!isLikelyEnglish && text.split(" ").size < 3) {
-            return text.replaceFirstChar { it.uppercaseChar() }
-        }
-
         return try {
             translator.translate(text).await().replaceFirstChar { it.uppercaseChar() }
         } catch (e: Exception) {
@@ -62,13 +58,17 @@ class FoodSearchViewModel : ViewModel() {
             return
         }
 
-        viewModelScope.launch {
+        // LÓGICA DE DEBOUNCE
+        searchJob?.cancel() // Cancela a busca anterior se o usuário ainda estiver digitando
+        searchJob = viewModelScope.launch {
+            delay(700L) // Espera 700ms após o usuário parar de digitar
+
             isLoading = true
             errorMessage = null
+            foodList = emptyList() // Limpa resultados antigos antes de uma nova busca
 
             try {
                 val response = OpenFoodFactsService.api.searchFoods(query)
-                Log.d("API", "Resposta recebida com ${response.products.size} produtos.")
 
                 val results = response.products
                     .filter { it.product_name != null && it.nutriments != null }
@@ -76,21 +76,19 @@ class FoodSearchViewModel : ViewModel() {
                     .mapNotNull { product ->
                         try {
                             val translatedName = product.product_name?.let { translateText(it) } ?: "Desconhecido"
-
-                            // ALTERAÇÃO AQUI: Mapeando para a nova estrutura do FoodItem
-                            val item = FoodItem(
+                            FoodItem(
+                                id = UUID.randomUUID().toString(),
                                 name = translatedName,
+                                grams = 100,
                                 baseCalories = product.nutriments?.energyKcal100g?.toInt() ?: 0,
                                 baseProtein = product.nutriments?.proteins_100g?.toDouble() ?: 0.0,
                                 baseCarbohydrate = product.nutriments?.carbohydrates_100g?.toDouble() ?: 0.0,
                                 baseFat = product.nutriments?.fat_100g?.toDouble() ?: 0.0,
                                 baseFiber = product.nutriments?.fiber_100g?.toDouble() ?: 0.0,
-                                grams = 100
+                                date = null,
+                                mealType = null
                             )
-                            Log.d("API", "Item mapeado e traduzido: $item")
-                            item
                         } catch (e: Exception) {
-                            Log.e("MapError", "Erro ao mapear produto: ${product.product_name}", e)
                             null
                         }
                     }
@@ -99,12 +97,11 @@ class FoodSearchViewModel : ViewModel() {
 
                 if (results.isEmpty()) {
                     errorMessage = "Nenhum alimento encontrado."
-                    Log.w("API", "Lista final de alimentos está vazia.")
                 }
 
             } catch (e: Exception) {
                 Log.e("FoodSearchViewModel", "Erro ao buscar alimento", e)
-                errorMessage = "Erro de rede ou conversão: ${e.message}"
+                errorMessage = "Erro de rede: ${e.message}"
             } finally {
                 isLoading = false
             }
@@ -114,6 +111,7 @@ class FoodSearchViewModel : ViewModel() {
     fun clearResults() {
         foodList = emptyList()
         errorMessage = null
+        searchJob?.cancel()
     }
 
     override fun onCleared() {

@@ -1,30 +1,31 @@
 package com.example.athlos.ui.models
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import java.util.UUID
 
+@Entity(tableName = "food_entries")
 data class FoodItem(
-    val id: String = UUID.randomUUID().toString(),
-    val name: String = "Desconhecido",
-
-    // Valores nutricionais base, sempre referentes a 100g
-    val baseCalories: Int = 0,
-    val baseProtein: Double = 0.0,
-    val baseCarbohydrate: Double = 0.0,
-    val baseFat: Double = 0.0,
-    val baseFiber: Double = 0.0,
-
-    // Quantidade em gramas que o usuário consumiu (pode ser editada)
-    var grams: Int = 100
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    // Alterado para permitir valores nulos
+    val date: String? = null,
+    val mealType: String? = null,
+    val name: String,
+    val grams: Int,
+    val baseCalories: Int,
+    val baseProtein: Double,
+    val baseCarbohydrate: Double,
+    val baseFat: Double,
+    val baseFiber: Double
 ) {
-    // Propriedades calculadas dinamicamente com base nos gramas
-    val calories: Int
-        get() = (baseCalories / 100.0 * grams).toInt()
+    val calories: Double
+        get() = (baseCalories / 100.0) * grams
     val protein: Double
-        get() = baseProtein / 100.0 * grams
+        get() = (baseProtein / 100.0) * grams
     val carbohydrate: Double
-        get() = baseCarbohydrate / 100.0 * grams
+        get() = (baseCarbohydrate / 100.0) * grams
     val fat: Double
-        get() = baseFat / 100.0 * grams
+        get() = (baseFat / 100.0) * grams
     val fiber: Double
-        get() = baseFiber / 100.0 * grams
+        get() = (baseFiber / 100.0) * grams
 }

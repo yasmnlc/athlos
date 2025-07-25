@@ -6,6 +6,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -63,9 +65,20 @@ fun AthlosApp() {
         composable("register") { RegisterScreen(mainNavController) }
         composable("main") { MainScreenWithBottomNav(mainNavController = mainNavController) }
         composable("settings") { SettingsScreen() }
-        composable("forgot_password") { ForgotPasswordScreen(mainNavController) }
+
+        // ADICIONADO: Rota para a tela Fale Conosco
+        composable("contact") {
+            ContactScreen(navController = mainNavController)
+        }
     }
 }
+
+data class DrawerItem(val label: String, val icon: ImageVector, val route: String?)
+
+val drawerItems = listOf(
+    DrawerItem("Configurações", Icons.Default.Settings, "settings"),
+    DrawerItem("Fale Conosco", Icons.Default.Email, "contact")
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,7 +92,35 @@ fun MainScreenWithBottomNav(mainNavController: NavHostController) {
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
-                // O seu código do DrawerContent aqui...
+                Spacer(Modifier.height(16.dp))
+                drawerItems.forEach { item ->
+                    NavigationDrawerItem(
+                        label = { Text(item.label) },
+                        icon = { Icon(item.icon, contentDescription = item.label) },
+                        selected = false,
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            item.route?.let { route ->
+                                mainNavController.navigate(route)
+                            }
+                        }
+                    )
+                }
+                // Item de Sair
+                NavigationDrawerItem(
+                    label = { Text("Sair") },
+                    icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Sair") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        auth.signOut()
+                        mainNavController.navigate("login") {
+                            popUpTo(mainNavController.graph.id) {
+                                inclusive = true
+                            }
+                        }
+                    }
+                )
             }
         }
     ) {
@@ -165,7 +206,6 @@ fun MainScreenWithBottomNav(mainNavController: NavHostController) {
                         SavedWorkoutDetailScreen(workoutId = workoutId)
                     }
                 }
-
             }
         }
     }

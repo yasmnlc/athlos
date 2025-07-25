@@ -53,8 +53,6 @@ class TrainingViewModel(
                     val userData = authRepository.getUserData(user.uid)
                     val favoriteWorkoutIds = userData?.favoriteWorkouts ?: emptyList()
 
-                    // Lista de todos os treinos disponíveis (com os 14 itens)
-                    // AJUSTADO PARA CORRESPONDER À CLASSE Workout (id, title, description, imageRes, apiBodyPart, isFavorite)
                     val allMockWorkouts = listOf(
                         Workout("treino_peito", "Treino de Peito", "Desenvolvimento, Supino, Crucifixo", R.drawable.chest, "chest"),
                         Workout("treino_costas", "Treino de Costas", "Puxada, Remada, Levantamento Terra", R.drawable.back, "back"),
@@ -63,7 +61,7 @@ class TrainingViewModel(
                         Workout("treino_biceps", "Treino de Bíceps", "Rosca Direta, Rosca Alternada, Rosca Concentrada", R.drawable.biceps, "upper arms"),
                         Workout("treino_triceps", "Treino de Tríceps", "Extensão, Tríceps Testa, Mergulho", R.drawable.triceps, "upper arms"),
                         Workout("treino_abdomen", "Treino de Abdômen", "Abdominal, Prancha, Elevação de Pernas", R.drawable.abs, "waist"),
-                        Workout("treino_gluteos", "Treino de Glúteos", "Agachamento, Glúteo Máquina, Elevação Pélvica", R.drawable.glutes, "glutes"),
+                        Workout("treino_gluteos", "Treino de Glúteos", "Agachamento, Glúteo Máquina, Elevação Pélvica", R.drawable.glutes, "upper legs"),
                         Workout("treino_dorsal", "Treino de Dorsal", "Puxada, Remada, Pullover", R.drawable.dorsal, "back"),
                         Workout("treino_posterior", "Treino de Posterior", "Stiff, Flexora, Bom Dia", R.drawable.hamstrings, "upper legs"),
                         Workout("treino_obliquos", "Treino de Oblíquos", "Rotação de Tronco, Flexão Lateral", R.drawable.obliquo, "waist"),

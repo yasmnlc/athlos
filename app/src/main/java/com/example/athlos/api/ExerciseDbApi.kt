@@ -20,4 +20,11 @@ interface ExerciseDbApi {
         @Header("X-RapidAPI-Key") apiKey: String,
         @Header("X-RapidAPI-Host") apiHost: String = "exercisedb.p.rapidapi.com"
     ): List<Exercise>
+
+    @GET("exercises/exercise/{id}")
+    suspend fun getExerciseById(
+        @Path("id") id: String,
+        @Header("X-RapidAPI-Key") apiKey: String,
+        @Header("X-RapidAPI-Host") apiHost: String = "exercisedb.p.rapidapi.com"
+    ): Exercise
 }

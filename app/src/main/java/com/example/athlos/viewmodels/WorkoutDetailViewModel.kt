@@ -34,8 +34,8 @@ class WorkoutDetailViewModel(
     private val exerciseRepository: ExerciseRepository = FirestoreExerciseRepository(FirebaseFirestore.getInstance())
 ) : ViewModel() {
 
-    private val youTubeApiKey = "AIzaSyDF71ScCOEuw-sm9qAlAIJ7vF-X79mt978"
-    private val exerciseDbApiKey = "69a1f86bdfmsh0a6e1a654dae000p197607jsn6acb47efc61e"
+    private val youTubeApiKey = "AIzaSyDF71ScCOEuw-sm9qAlAIJ7vF-X79mt978" // Lembre-se de proteger sua chave API
+    private val exerciseDbApiKey = "69a1f86bdfmsh0a6e1a654dae000p197607jsn6acb47efc61e" // Lembre-se de proteger sua chave API
 
     private val _uiState = MutableStateFlow(WorkoutDetailState())
     val uiState: StateFlow<WorkoutDetailState> = _uiState.asStateFlow()
@@ -46,76 +46,54 @@ class WorkoutDetailViewModel(
             try {
                 val customWorkout = authRepository.getCustomWorkouts().find { it.id == workoutId }
 
-                // Log 1: Verifique os IDs de exercício do treino personalizado
-                Log.d("WorkoutDetailViewModel", "IDs de exercícios do treino: ${customWorkout?.exerciseIds}")
-
                 if (customWorkout == null) {
                     _uiState.update { it.copy(isLoading = false, errorMessage = "Treino não encontrado.") }
                     return@launch
                 }
 
-                val exerciseIds = customWorkout.exerciseIds.orEmpty().toSet()
-                val invalidExerciseIds = mutableListOf<String>()
-
-                // === CORREÇÃO 1: API ExerciseDbService ===
-                // Removemos o .body() pois ExerciseDbApi.getAllExercises já retorna List<Exercise> diretamente.
-                // Adicionamos 'apiHost' conforme a definição em ExerciseDbApi.kt.
-                val allExercisesList = ExerciseDbService.api.getAllExercises(
-                    apiKey = exerciseDbApiKey,
-                    apiHost = "exercisedb.p.rapidapi.com", //
-                    limit = 1500
-                )
-                val validExerciseMap = allExercisesList.associateBy { it.id }
-
-                // Log 2: Verifique quantos exercícios foram obtidos da API
-                Log.d("WorkoutDetailViewModel", "Total de exercícios obtidos da API: ${validExerciseMap.size}")
-
+                val exerciseIds = customWorkout.exerciseIds.orEmpty()
 
                 val exerciseDetails = coroutineScope {
                     exerciseIds.map { exerciseId ->
                         async {
+                            // 1. Tenta buscar do Firestore (cache) primeiro
                             var exercise = exerciseRepository.getExerciseById(exerciseId)
 
+                            // 2. Se não estiver no cache (Cache Miss), busca na API
                             if (exercise == null) {
-                                // Log 3: Exercício não encontrado no Firestore
-                                Log.d("WorkoutDetailViewModel", "Exercício com ID $exerciseId NÃO encontrado no Firestore. Tentando API...")
-                                exercise = validExerciseMap[exerciseId]
+                                Log.d("WorkoutDetailVM", "Cache MISS para ID $exerciseId. Buscando na API...")
+                                try {
+                                    // MUDANÇA PRINCIPAL: Busca apenas UM exercício por ID
+                                    exercise = ExerciseDbService.api.getExerciseById(
+                                        id = exerciseId,
+                                        apiKey = exerciseDbApiKey
+                                    )
+                                    Log.d("WorkoutDetailVM", "API HIT para ID $exerciseId: ${exercise.name}")
 
-                                if (exercise == null) {
-                                    Log.w("WorkoutDetailVM", "⚠️ Exercício ID $exerciseId não encontrado na API. Será ignorado.")
-                                    invalidExerciseIds.add(exerciseId)
-                                    return@async null
+                                    // 3. Salva o exercício recém-buscado no Firestore (cache)
+                                    exerciseRepository.saveExercise(exercise)
+                                    Log.d("WorkoutDetailVM", "Exercício $exerciseId salvo no cache.")
+
+                                } catch (e: Exception) {
+                                    Log.w("WorkoutDetailVM", "⚠️ Exercício ID $exerciseId não encontrado na API. Será ignorado.", e)
+                                    return@async null // Retorna nulo se falhar na API
                                 }
-
-                                exerciseRepository.saveExercise(exercise)
-                                // Log 4: Exercício encontrado na API
-                                Log.d("WorkoutDetailViewModel", "Exercício com ID $exerciseId encontrado na API: ${exercise.name}")
                             } else {
-                                // Log 5: Exercício encontrado no Firestore
-                                Log.d("WorkoutDetailViewModel", "Exercício com ID $exerciseId encontrado no Firestore: ${exercise.name}")
+                                Log.d("WorkoutDetailVM", "Cache HIT para ID $exerciseId: ${exercise.name}")
                             }
 
-                            // === CORREÇÃO 2: Campo do ID do YouTube ===
-                            // Revertemos para 'videoId' pois a imagem mostrou que 'youtubeVideoId' é uma referência não resolvida.
-                            if (exercise.videoId == null) { //
+                            // 4. (Opcional) Busca vídeo do YouTube se não existir
+                            if (exercise.videoId == null) {
                                 val videoId = findYouTubeVideoId(exercise.name)
-                                exercise = exercise.copy(videoId = videoId) //
+                                // Atualiza o objeto e salva novamente no cache com o ID do vídeo
+                                exercise = exercise.copy(videoId = videoId)
                                 exerciseRepository.saveExercise(exercise)
                             }
 
                             exercise
                         }
-                    }.awaitAll().filterNotNull()
+                    }.awaitAll().filterNotNull() // Filtra qualquer exercício que não foi encontrado em lugar nenhum
                 }
-
-                if (invalidExerciseIds.isNotEmpty()) {
-                    Log.w("WorkoutDetailVM", "⚠️ ${invalidExerciseIds.size} exercício(s) inválido(s): $invalidExerciseIds")
-                }
-
-                // Log 6: Verifique a lista final de exercícios antes de atualizar o UI State
-                Log.d("WorkoutDetailViewModel", "Total de exercícios prontos para exibição: ${exerciseDetails.size}")
-                Log.d("WorkoutDetailViewModel", "Nomes dos exercícios para exibição: ${exerciseDetails.map { it.name }}")
-
 
                 _uiState.update {
                     it.copy(

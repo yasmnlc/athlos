@@ -19,6 +19,10 @@ object NotificationScheduler {
 
     const val CUSTOM_NOTIFICATION_ID_BASE = 1000
 
+    /**
+     * Cria o canal de notificação (necessário para Android 8.0+).
+     * Esta função era idêntica em ambas as versões.
+     */
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = NOTIFICATION_CHANNEL_NAME
@@ -34,6 +38,9 @@ object NotificationScheduler {
         }
     }
 
+    /**
+     * Agenda uma notificação ÚNICA e EXATA para um horário específico.
+     */
     fun scheduleNotification(
         context: Context,
         title: String,
@@ -55,42 +62,78 @@ object NotificationScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        Log.d("NotificationScheduler", "Attempting to schedule notification ID: $notificationId " +
-                "at ${java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(triggerAtMillis))} " +
-                "Title: '$title', Message: '$message'")
+        Log.d("NotificationScheduler", "Agendando notificação ÚNICA ID: $notificationId para ${java.text.SimpleDateFormat("dd/MM HH:mm", java.util.Locale.getDefault()).format(java.util.Date(triggerAtMillis))}")
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (alarmManager.canScheduleExactAlarms()) {
-                alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerAtMillis,
-                    pendingIntent
-                )
-                Log.d("NotificationScheduler", "Exact alarm scheduled successfully for ID: $notificationId (API S+).")
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+                Log.d("NotificationScheduler", "Alarme exato agendado com sucesso para ID: $notificationId (API S+).")
             } else {
-                Log.w("NotificationScheduler", "Cannot schedule exact alarms for ID: $notificationId. User needs to grant permission (ACTION_REQUEST_SCHEDULE_EXACT_ALARM). Falling back to inexact alarm if available, otherwise it won't be scheduled.")
-                alarmManager.setAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerAtMillis,
-                    pendingIntent
-                )
+                Log.w("NotificationScheduler", "Permissão para alarmes exatos não concedida para ID: $notificationId. Usando alarme não-exato como fallback.")
+                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
             }
         } else {
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                triggerAtMillis,
-                pendingIntent
-            )
-            Log.d("NotificationScheduler", "Exact alarm scheduled successfully for ID: $notificationId (pre-API S).")
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+            Log.d("NotificationScheduler", "Alarme exato agendado com sucesso para ID: $notificationId (pre-API S).")
         }
     }
 
-    fun cancelNotification(context: Context, notificationId: Int) {
+    /**
+     * UNIFICADO: Função da segunda versão para agendar notificações REPETITIVAS.
+     */
+    fun scheduleRepeatingNotification(
+        context: Context,
+        title: String,
+        message: String,
+        triggerAtMillis: Long, // A hora do primeiro disparo
+        notificationId: Int
+    ) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, NotificationReceiver::class.java).apply {
             putExtra("notification_id", notificationId)
+            putExtra("notification_title", title)
+            putExtra("notification_message", message)
         }
 
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            notificationId,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        Log.d("NotificationScheduler", "Agendando notificação REPETITIVA ID: $notificationId com início em ${java.text.SimpleDateFormat("dd/MM HH:mm", java.util.Locale.getDefault()).format(java.util.Date(triggerAtMillis))}")
+
+        alarmManager.setInexactRepeating(
+            AlarmManager.RTC_WAKEUP,
+            triggerAtMillis,
+            AlarmManager.INTERVAL_DAY,
+            pendingIntent
+        )
+    }
+
+    /**
+     * UNIFICADO: Função de cancelamento corrigida e funcional, baseada na segunda versão.
+     */
+    fun cancelNotification(context: Context, notificationId: Int) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+        // Cancela o alarme principal
+        cancelSingleAlarm(context, alarmManager, notificationId)
+
+        // Tenta cancelar alarmes específicos de cada dia da semana, se existirem
+        val days = listOf(
+            Calendar.SUNDAY, Calendar.MONDAY, Calendar.TUESDAY, Calendar.WEDNESDAY,
+            Calendar.THURSDAY, Calendar.FRIDAY, Calendar.SATURDAY
+        )
+        days.forEach { day ->
+            val dailyNotificationId = notificationId + day
+            cancelSingleAlarm(context, alarmManager, dailyNotificationId)
+        }
+    }
+
+    private fun cancelSingleAlarm(context: Context, alarmManager: AlarmManager, notificationId: Int) {
+        val intent = Intent(context, NotificationReceiver::class.java)
         val pendingIntent = PendingIntent.getBroadcast(
             context,
             notificationId,
@@ -101,9 +144,7 @@ object NotificationScheduler {
         pendingIntent?.let {
             alarmManager.cancel(it)
             it.cancel()
-            Log.d("NotificationScheduler", "Cancelled notification ID: $notificationId")
-        } ?: run {
-            Log.d("NotificationScheduler", "No pending intent found for ID: $notificationId to cancel.")
+            Log.d("NotificationScheduler", "Alarme com ID cancelado: $notificationId")
         }
     }
 }

@@ -1,11 +1,9 @@
 package com.example.athlos.ui.screens
 
-import android.content.Context
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,7 +22,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -33,35 +30,46 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.athlos.ui.models.FoodItem
 import com.example.athlos.ui.theme.DarkGreen
+import com.example.athlos.viewmodels.DiaryViewModel
 import com.example.athlos.viewmodels.FoodSearchViewModel
-import kotlinx.coroutines.CoroutineScope
+import java.time.LocalDate // Importar LocalDate
+import java.time.format.DateTimeFormatter
 
+// Cores para a UI, podem ser movidas para um arquivo de tema se preferir
 private val MealTitleBackgroundColor = Color(0xFFE0E0E0)
 private val FoodCardBackgroundColor = Color(0xFFF5F5F5)
 
+// Função de tradução simples (como fornecida anteriormente)
+fun String.traduzirSimples(): String {
+    return this.lowercase()
+        .replace("chicken", "frango")
+        .replace("beef", "carne bovina")
+        .replace("pork", "carne suína")
+        .replace("milk", "leite")
+        .replace("egg", "ovo")
+        .replace("rice", "arroz")
+        .replace("bread", "pão")
+        .replace("cheese", "queijo")
+        .replaceFirstChar { it.uppercaseChar() }
+}
+
 @Composable
-fun DiaryScreen(viewModel: FoodSearchViewModel = viewModel()) {
-    val breakfastFoods = remember { mutableStateListOf<FoodItem>() }
-    val lunchFoods     = remember { mutableStateListOf<FoodItem>() }
-    val dinnerFoods    = remember { mutableStateListOf<FoodItem>() }
-    val snacksFoods    = remember { mutableStateListOf<FoodItem>() }
+fun DiaryScreen(
+    // A tela agora usa dois ViewModels: um para o estado do diário e outro para a busca de alimentos.
+    diaryViewModel: DiaryViewModel = viewModel(),
+    foodSearchViewModel: FoodSearchViewModel = viewModel()
+) {
+    // O estado agora vem diretamente do DiaryViewModel, que lê do banco de dados Room.
+    val uiState by diaryViewModel.uiState.collectAsState()
+    val allFoods = uiState.foodEntries
 
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+    // Os cálculos de totais continuam funcionando, pois reagem às mudanças na lista de alimentos.
+    val totalCalories = allFoods.sumOf { it.calories }.toInt()
+    val totalCarb     = allFoods.sumOf { it.carbohydrate }
+    val totalProtein  = allFoods.sumOf { it.protein }
+    val totalFat      = allFoods.sumOf { it.fat }
 
-    val allFoods = remember {
-        derivedStateOf {
-            breakfastFoods + lunchFoods + dinnerFoods + snacksFoods
-        }
-    }
-
-    // O cálculo total agora usa as propriedades dinâmicas do FoodItem,
-    // então ele se ajustará automaticamente quando a quantidade for editada.
-    val totalCalories = allFoods.value.sumOf { it.calories.toDouble() }.toInt()
-    val totalCarb     = allFoods.value.sumOf { it.carbohydrate }
-    val totalProtein  = allFoods.value.sumOf { it.protein }
-    val totalFat      = allFoods.value.sumOf { it.fat }
-
+    // Metas diárias (podem ser movidas para o ViewModel ou configurações do usuário no futuro)
     val calorieGoal = 2000
     val carbGoal = 275.0
     val proteinGoal = 50.0
@@ -74,6 +82,7 @@ fun DiaryScreen(viewModel: FoodSearchViewModel = viewModel()) {
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // O cabeçalho com calorias e macros não precisa de alterações.
         Text(
             text = "$totalCalories kcal",
             fontSize = 24.sp,
@@ -100,10 +109,36 @@ fun DiaryScreen(viewModel: FoodSearchViewModel = viewModel()) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        MealSection("CAFÉ DA MANHÃ", breakfastFoods, scope, context, viewModel)
-        MealSection("ALMOÇO",        lunchFoods,     scope, context, viewModel)
-        MealSection("JANTAR",        dinnerFoods,    scope, context, viewModel)
-        MealSection("LANCHES/OUTROS", snacksFoods,   scope, context, viewModel)
+        // As seções de refeição agora filtram a lista única vinda do ViewModel.
+        // O nome da refeição no filtro deve ser EXATAMENTE igual ao mealType salvo no FoodItem.
+        MealSection(
+            title = "CAFÉ DA MANHÃ",
+            mealType = "CAFÉ DA MANHÃ", // Passa o mealType exato
+            foods = allFoods.filter { it.mealType == "CAFÉ DA MANHÃ" },
+            diaryViewModel = diaryViewModel,
+            foodSearchViewModel = foodSearchViewModel
+        )
+        MealSection(
+            title = "ALMOÇO",
+            mealType = "ALMOÇO", // Passa o mealType exato
+            foods = allFoods.filter { it.mealType == "ALMOÇO" },
+            diaryViewModel = diaryViewModel,
+            foodSearchViewModel = foodSearchViewModel
+        )
+        MealSection(
+            title = "JANTAR",
+            mealType = "JANTAR", // Passa o mealType exato
+            foods = allFoods.filter { it.mealType == "JANTAR" },
+            diaryViewModel = diaryViewModel,
+            foodSearchViewModel = foodSearchViewModel
+        )
+        MealSection(
+            title = "LANCHES/OUTROS",
+            mealType = "LANCHES/OUTROS", // Passa o mealType exato
+            foods = allFoods.filter { it.mealType == "LANCHES/OUTROS" },
+            diaryViewModel = diaryViewModel,
+            foodSearchViewModel = foodSearchViewModel
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
     }
@@ -112,16 +147,15 @@ fun DiaryScreen(viewModel: FoodSearchViewModel = viewModel()) {
 @Composable
 fun MealSection(
     title: String,
-    foods: MutableList<FoodItem>,
-    scope: CoroutineScope,
-    context: Context,
-    viewModel: FoodSearchViewModel
+    mealType: String, // Adicionado para passar o tipo de refeição para o AlertDialog
+    foods: List<FoodItem>, // A lista agora é imutável (List) em vez de MutableList.
+    diaryViewModel: DiaryViewModel,
+    foodSearchViewModel: FoodSearchViewModel
 ) {
     var showSearchDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
-
-    // Estado para controlar o diálogo de edição
     var foodToEdit by remember { mutableStateOf<FoodItem?>(null) }
+    // uiState não é mais usado diretamente aqui, pois foods já é filtrado.
 
     Column(
         modifier = Modifier
@@ -154,7 +188,6 @@ fun MealSection(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Diálogo de busca de alimentos
         if (showSearchDialog) {
             AlertDialog(
                 onDismissRequest = { showSearchDialog = false },
@@ -167,43 +200,49 @@ fun MealSection(
                             label = { Text("Digite o alimento") }
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { viewModel.searchFood(searchQuery) }) {
+                        Button(onClick = { foodSearchViewModel.searchFood(searchQuery) }) {
                             Text("Buscar")
                         }
                         Spacer(modifier = Modifier.height(8.dp))
 
                         when {
-                            viewModel.isLoading -> CircularProgressIndicator()
-                            viewModel.errorMessage != null -> Text(viewModel.errorMessage ?: "Erro", color = Color.Red)
+                            foodSearchViewModel.isLoading -> CircularProgressIndicator()
+                            foodSearchViewModel.errorMessage != null -> Text(foodSearchViewModel.errorMessage ?: "Erro", color = Color.Red)
                             else -> Column {
-                                viewModel.foodList.forEach { result ->
+                                // Mapeia os resultados da busca para o modelo de dados do BD
+                                foodSearchViewModel.foodList.forEach { searchResult ->
                                     Card(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 4.dp),
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                         colors = CardDefaults.cardColors(containerColor = FoodCardBackgroundColor),
                                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                                         onClick = {
-                                            foods.add(result)
+                                            // AÇÃO ATUALIZADA: Adiciona o alimento através do DiaryViewModel.
+                                            val newEntry = FoodItem(
+                                                // UUID é gerado automaticamente no FoodItem, não precisa aqui
+                                                date = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE), // Garante a data correta
+                                                mealType = mealType, // Usa o mealType passado para a MealSection
+                                                name = searchResult.name,
+                                                grams = searchResult.grams,
+                                                baseCalories = searchResult.baseCalories,
+                                                baseProtein = searchResult.baseProtein,
+                                                baseCarbohydrate = searchResult.baseCarbohydrate,
+                                                baseFat = searchResult.baseFat,
+                                                baseFiber = searchResult.baseFiber
+                                            )
+                                            diaryViewModel.addFood(newEntry)
                                             showSearchDialog = false
                                             searchQuery = ""
-                                            viewModel.clearResults()
+                                            foodSearchViewModel.clearResults()
                                         }
                                     ) {
                                         Column(modifier = Modifier.padding(12.dp)) {
-                                            Text(
-                                                text = result.name,
-                                                style = MaterialTheme.typography.titleMedium
-                                            )
-                                            Text(
-                                                text = "100 g", // O padrão é sempre 100g
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                            )
+                                            Text(text = searchResult.name.traduzirSimples(), style = MaterialTheme.typography.titleMedium) // Usar tradução aqui
+                                            // As propriedades quantity e unit não existem no modelo FoodItem, usar grams
+                                            Text(text = "${searchResult.grams} g", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
                                             Spacer(modifier = Modifier.height(4.dp))
                                             Text(
                                                 text = "Prot: %.1fg | Carb: %.1fg | Fib: %.1fg | Gord: %.1fg | %.0fkcal".format(
-                                                    result.baseProtein, result.baseCarbohydrate, result.baseFiber, result.baseFat, result.baseCalories.toFloat()
+                                                    searchResult.baseProtein, searchResult.baseCarbohydrate, searchResult.baseFiber, searchResult.baseFat, searchResult.baseCalories.toFloat()
                                                 ),
                                                 fontSize = 12.sp,
                                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
@@ -217,23 +256,23 @@ fun MealSection(
                 },
                 confirmButton = {},
                 dismissButton = {
-                    TextButton(onClick = { showSearchDialog = false }) {
+                    TextButton(onClick = {
+                        foodSearchViewModel.clearResults()
+                        showSearchDialog = false
+                    }) {
                         Text("Fechar")
                     }
                 }
             )
         }
 
-        // Diálogo para editar a quantidade do alimento
         foodToEdit?.let { food ->
             EditFoodDialog(
                 food = food,
                 onDismiss = { foodToEdit = null },
                 onSave = { updatedGrams ->
-                    val index = foods.indexOfFirst { it.id == food.id }
-                    if (index != -1) {
-                        foods[index] = food.copy(grams = updatedGrams)
-                    }
+                    // AÇÃO ATUALIZADA: Atualiza o alimento através do DiaryViewModel.
+                    diaryViewModel.updateFood(food.copy(grams = updatedGrams))
                     foodToEdit = null
                 }
             )
@@ -249,18 +288,74 @@ fun MealSection(
                 modifier = Modifier.padding(start = 8.dp)
             )
         } else {
-            // Lista de alimentos adicionados com botões de editar/apagar
             foods.forEach { food ->
+                // Usar o novo Composable FoodItemCardWithActions para exibir os cards
                 EditableFoodItemCard(
                     food = food,
                     onEditClick = { foodToEdit = food },
-                    onDeleteClick = { foods.remove(food) }
+                    // AÇÃO ATUALIZADA: Apaga o alimento através do DiaryViewModel.
+                    onDeleteClick = { diaryViewModel.deleteFood(food) }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
 }
+
+// Composables auxiliares permanecem inalterados.
+
+@Composable
+fun MacroProgressItem(label: String, progress: Int, progressColor: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        val strokeWidth = 8.dp
+        ProgressRing(progress, progressColor, strokeWidth)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = label,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontSize = 12.sp,
+            style = MaterialTheme.typography.labelSmall
+        )
+    }
+}
+
+@Composable
+fun ProgressRing(progress: Int, progressColor: Color, strokeWidth: Dp) {
+    val animatedProgress = remember { Animatable(0f) }
+
+    LaunchedEffect(progress) {
+        animatedProgress.animateTo(
+            targetValue = progress.coerceIn(0, 100) / 100f,
+            animationSpec = tween(durationMillis = 1000)
+        )
+    }
+
+    val backgroundRingColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+
+    Canvas(modifier = Modifier.size(80.dp)) {
+        val radius = size.minDimension / 2f
+
+        drawCircle(
+            color = backgroundRingColor,
+            radius = radius,
+            style = Stroke(width = strokeWidth.toPx())
+        )
+
+        drawArc(
+            color = progressColor,
+            startAngle = 270f,
+            sweepAngle = animatedProgress.value * 360f,
+            useCenter = false,
+            topLeft = Offset(strokeWidth.toPx() / 2, strokeWidth.toPx() / 2),
+            size = Size(
+                width = size.width - strokeWidth.toPx(),
+                height = size.height - strokeWidth.toPx()
+            ),
+            style = Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round)
+        )
+    }
+}
+
 
 @Composable
 fun EditableFoodItemCard(
@@ -281,21 +376,20 @@ fun EditableFoodItemCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = food.name,
+                    text = food.name.traduzirSimples(), // Usar a função de tradução aqui
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${food.grams} g", // Mostra a quantidade atual
+                    text = "${food.grams} g",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    // Mostra os macros calculados para a quantidade atual
                     text = "Prot: %.1fg | Carb: %.1fg | Gord: %.1fg | %.0fkcal".format(
-                        food.protein, food.carbohydrate, food.fat, food.calories.toFloat()
+                        food.protein, food.carbohydrate, food.fat, food.calories
                     ),
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
@@ -303,7 +397,6 @@ fun EditableFoodItemCard(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            // Botões de Ação
             Row {
                 IconButton(onClick = onEditClick) {
                     Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
@@ -356,58 +449,4 @@ fun EditFoodDialog(
             }
         }
     )
-}
-
-
-// As funções MacroProgressItem e ProgressRing permanecem inalteradas
-@Composable
-fun MacroProgressItem(label: String, progress: Int, progressColor: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        val strokeWidth = 8.dp
-        ProgressRing(progress, progressColor, strokeWidth)
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = label,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 12.sp,
-            style = MaterialTheme.typography.labelSmall
-        )
-    }
-}
-
-@Composable
-fun ProgressRing(progress: Int, progressColor: Color, strokeWidth: Dp) {
-    val animatedProgress = remember { Animatable(0f) }
-
-    LaunchedEffect(progress) {
-        animatedProgress.animateTo(
-            targetValue = progress.coerceIn(0, 100) / 100f,
-            animationSpec = tween(durationMillis = 1000)
-        )
-    }
-
-    val backgroundRingColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
-
-    Canvas(modifier = Modifier.size(80.dp)) {
-        val radius = size.minDimension / 2f
-
-        drawCircle(
-            color = backgroundRingColor,
-            radius = radius,
-            style = Stroke(width = strokeWidth.toPx())
-        )
-
-        drawArc(
-            color = progressColor,
-            startAngle = 270f,
-            sweepAngle = animatedProgress.value * 360f,
-            useCenter = false,
-            topLeft = Offset(strokeWidth.toPx() / 2, strokeWidth.toPx() / 2),
-            size = Size(
-                width = size.width - strokeWidth.toPx(),
-                height = size.height - strokeWidth.toPx()
-            ),
-            style = Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round)
-        )
-    }
 }
