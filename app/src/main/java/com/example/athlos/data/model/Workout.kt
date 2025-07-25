@@ -5,8 +5,7 @@ data class Workout(
     val title: String = "",
     val description: String = "",
     val imageRes: Int = 0,
-    var isFavorite: Boolean = false
 ) {
     @Suppress("unused")
-    constructor() : this(id = "", title = "", description = "", imageRes = 0, isFavorite = false)
+    constructor() : this(id = "", title = "", description = "", imageRes = 0)
 }

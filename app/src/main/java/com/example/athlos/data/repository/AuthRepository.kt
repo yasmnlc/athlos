@@ -52,12 +52,12 @@ class FirebaseAuthRepository(
             altura = "",
             praticaExercicios = false,
             diasSemana = "",
-            meta = "",
+            goal = "",
             aguaAtual = 0,
             aguaMeta = 2000,
             lastResetDate = LocalDate.MIN.format(DateTimeFormatter.ISO_LOCAL_DATE),
             profileImageUrl = null,
-            favoriteWorkouts = emptyList()
+            savedWorkouts = emptyList()
         )
 
         val finalUserDataToSave = initialUser.toMap().toMutableMap()

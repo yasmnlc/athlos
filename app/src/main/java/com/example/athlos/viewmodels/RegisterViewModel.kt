@@ -16,6 +16,7 @@ import java.util.Calendar
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import com.example.athlos.utils.await
+import com.google.firebase.auth.GoogleAuthProvider
 
 data class RegisterUiState(
     val nome: String = "",
@@ -28,6 +29,7 @@ data class RegisterUiState(
     val senha: String = "",
     val praticaExercicios: Boolean = false,
     val diasSemana: String = "",
+    val goal: String = "",
     val sexoExpanded: Boolean = false,
     val erroMensagem: String? = null,
     val carregando: Boolean = false,
@@ -75,7 +77,7 @@ class RegisterViewModel(
     fun updateSenha(newSenha: String) { _uiState.value = _uiState.value.copy(senha = newSenha) }
     fun updatePraticaExercicios(newValue: Boolean) { _uiState.value = _uiState.value.copy(praticaExercicios = newValue) }
     fun updateDiasSemana(newDias: String) { _uiState.value = _uiState.value.copy(diasSemana = newDias) }
-
+    fun updateGoal(newGoal: String) { _uiState.value = _uiState.value.copy(goal = newGoal) }
 
     val dobDay: Int?
         get() = _uiState.value.dataNascimentoText.substringBefore("/", "").toIntOrNull()
@@ -101,7 +103,7 @@ class RegisterViewModel(
     fun isEmailValid(): Boolean = Patterns.EMAIL_ADDRESS.matcher(_uiState.value.email).matches()
     fun isPasswordValid(): Boolean = _uiState.value.senha.length >= 6
     fun isExerciseValid(): Boolean = !_uiState.value.praticaExercicios || _uiState.value.diasSemana.isNotBlank()
-
+    fun isGoalValid(): Boolean = _uiState.value.goal.isNotBlank()
 
     fun registrarUsuarioEPerfil() {
         _uiState.value = _uiState.value.copy(carregando = true, erroMensagem = null, registroSucesso = false)
@@ -118,6 +120,7 @@ class RegisterViewModel(
                     "email" to _uiState.value.email,
                     "praticaExercicios" to _uiState.value.praticaExercicios,
                     "diasSemana" to _uiState.value.diasSemana,
+                    "goal" to _uiState.value.goal,
                     "meta" to "",
                     "aguaAtual" to 0,
                     "aguaMeta" to 2000,
@@ -189,7 +192,8 @@ class RegisterViewModel(
                         "peso" to _uiState.value.peso,
                         "altura" to _uiState.value.altura,
                         "praticaExercicios" to _uiState.value.praticaExercicios,
-                        "diasSemana" to _uiState.value.diasSemana
+                        "diasSemana" to _uiState.value.diasSemana,
+                        "goal" to _uiState.value.goal
                     )
                     // Usamos merge = true para não sobrescrever os dados básicos já salvos
                     authRepository.updateUserData(currentUser.uid, additionalData, merge = true)
@@ -208,5 +212,10 @@ class RegisterViewModel(
                 _uiState.value = _uiState.value.copy(carregando = false, erroMensagem = "Nenhum usuário logado.")
             }
         }
+    }
+
+    fun isCurrentUserGoogleUser(): Boolean {
+        val currentUser = authRepository.currentUser
+        return currentUser?.providerData?.any { it.providerId == GoogleAuthProvider.PROVIDER_ID } == true
     }
 }

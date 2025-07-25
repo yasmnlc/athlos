@@ -74,6 +74,9 @@ fun RegisterScreen(mainNavController: NavHostController) {
         composable("register_exercise") {
             RegisterExerciseScreen(registerNavController, viewModel)
         }
+        composable("register_goal") {
+            RegisterGoalScreen(registerNavController, viewModel)
+        }
         composable("register_final_success") {
             Box(
                 modifier = Modifier

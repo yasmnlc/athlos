@@ -69,11 +69,10 @@ fun DiaryScreen(
     val totalProtein  = allFoods.sumOf { it.protein }
     val totalFat      = allFoods.sumOf { it.fat }
 
-    // Metas diárias (podem ser movidas para o ViewModel ou configurações do usuário no futuro)
-    val calorieGoal = 2000
-    val carbGoal = 275.0
-    val proteinGoal = 50.0
-    val fatGoal = 70.0
+    val calorieGoal = uiState.calorieGoal
+    val carbGoal = uiState.carbGoal
+    val proteinGoal = uiState.proteinGoal
+    val fatGoal = uiState.fatGoal
 
     Column(
         modifier = Modifier

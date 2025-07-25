@@ -2,6 +2,7 @@ package com.example.athlos.data.repository
 
 import android.util.Log
 import com.example.athlos.data.local.FoodEntryDao
+import com.example.athlos.data.model.User
 import com.example.athlos.ui.models.FoodItem
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -76,5 +77,11 @@ class DiaryRepository(
         val yesterday = LocalDate.now().minusDays(1)
         // Esta operação é apenas local, para limpar o cache do dispositivo.
         foodEntryDao.deleteAllOldEntries(yesterday.format(dateFormatter))
+    }
+
+    suspend fun getUserData(): User? {
+        val uid = auth.currentUser?.uid ?: return null
+        return firestore.collection("users").document(uid).get().await()
+            .toObject(User::class.java)
     }
 }

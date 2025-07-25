@@ -59,14 +59,8 @@ fun ProfileScreen(
         uiState.userData?.let { data ->
             ProfileContent(
                 data = data,
-                meta = uiState.meta,
-                isEditingMeta = uiState.isEditingMeta,
-                isSavingMeta = uiState.isSavingMeta,
                 isUploadingPhoto = uiState.isUploadingPhoto,
                 profileImageUrl = uiState.profileImageUrl,
-                onMetaChange = { profileViewModel.updateMeta(it) },
-                onToggleEditMeta = { profileViewModel.toggleEditMeta(it) },
-                onSaveMeta = { profileViewModel.saveMeta() },
                 onUploadPhoto = { uri -> profileViewModel.uploadProfileImage(uri) },
                 onLogout = {
                     profileViewModel.logoutUser()
@@ -92,14 +86,8 @@ fun ProfileScreen(
 @Composable
 fun ProfileContent(
     data: User,
-    meta: String,
-    isEditingMeta: Boolean,
-    isSavingMeta: Boolean,
     isUploadingPhoto: Boolean,
     profileImageUrl: String?,
-    onMetaChange: (String) -> Unit,
-    onToggleEditMeta: (Boolean) -> Unit,
-    onSaveMeta: () -> Unit,
     onUploadPhoto: (Uri) -> Unit,
     onLogout: () -> Unit
 ) {
@@ -198,67 +186,6 @@ fun ProfileContent(
                 ProfileInfo("Peso", data.peso)
                 Divider(modifier = Modifier.padding(vertical = 4.dp))
                 ProfileInfo("Altura", data.altura)
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        "Meta pessoal",
-                        fontSize = 18.sp,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Medium
-                    )
-                    IconButton(onClick = { onToggleEditMeta(!isEditingMeta) }) {
-                        Icon(
-                            imageVector = if (isEditingMeta) Icons.Default.Save else Icons.Default.Edit,
-                            contentDescription = if (isEditingMeta) "Salvar Meta" else "Editar Meta",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-
-                if (isEditingMeta) {
-                    OutlinedTextField(
-                        value = meta,
-                        onValueChange = onMetaChange,
-                        placeholder = { Text("Ex: ganhar massa muscular") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = defaultTextFieldColors(),
-                        singleLine = true,
-                        enabled = !isSavingMeta
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Button(
-                        onClick = onSaveMeta,
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = meta.isNotBlank() && !isSavingMeta,
-                        shape = MaterialTheme.shapes.medium,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        )
-                    ) {
-                        if (isSavingMeta) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                        } else {
-                            Text("Salvar Meta")
-                        }
-                    }
-                } else {
-                    Text(
-                        text = if (meta.isNotBlank()) meta else "Nenhuma meta definida. Toque no lápis para editar.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
 
                 Spacer(modifier = Modifier.height(24.dp))
 

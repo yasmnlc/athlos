@@ -20,10 +20,7 @@ data class ProfileUiState(
     val userData: User? = null,
     val loading: Boolean = true,
     val errorMessage: String? = null,
-    val meta: String = "",
-    val isEditingMeta: Boolean = false,
     val profileImageUrl: String? = null,
-    val isSavingMeta: Boolean = false,
     val isUploadingPhoto: Boolean = false
 )
 
@@ -50,11 +47,10 @@ class ProfileViewModel(
 
                     _uiState.value = _uiState.value.copy(
                         userData = userProfile,
-                        meta = userProfile?.meta ?: "",
                         profileImageUrl = imageUrl,
                         loading = false
                     )
-                    Log.d("ProfileViewModel", "Perfil do usuário carregado: ${userProfile?.nome}, Meta: ${userProfile?.meta}, Foto: $imageUrl")
+                    Log.d("ProfileViewModel", "Perfil do usuário carregado: ${userProfile?.nome}, Foto: $imageUrl")
                 } catch (e: Exception) {
                     _uiState.value = _uiState.value.copy(
                         errorMessage = "Falha ao carregar dados do perfil: ${e.message}",
@@ -68,46 +64,6 @@ class ProfileViewModel(
                     loading = false
                 )
                 Log.d("ProfileViewModel", "Nenhum usuário logado no ProfileScreen.")
-            }
-        }
-    }
-
-    fun updateMeta(newMeta: String) {
-        _uiState.value = _uiState.value.copy(meta = newMeta)
-    }
-
-    fun toggleEditMeta(isEditing: Boolean) {
-        _uiState.value = _uiState.value.copy(isEditingMeta = isEditing)
-        if (!isEditing && _uiState.value.meta != _uiState.value.userData?.meta) {
-            _uiState.value = _uiState.value.copy(meta = _uiState.value.userData?.meta ?: "")
-        }
-    }
-
-    fun saveMeta() {
-        _uiState.value = _uiState.value.copy(isSavingMeta = true, errorMessage = null)
-        viewModelScope.launch {
-            val currentUser = authRepository.currentUser
-            if (currentUser != null) {
-                try {
-                    authRepository.updateUserData(currentUser.uid, mapOf("meta" to _uiState.value.meta))
-                    _uiState.value = _uiState.value.copy(
-                        userData = _uiState.value.userData?.copy(meta = _uiState.value.meta),
-                        isEditingMeta = false,
-                        isSavingMeta = false
-                    )
-                    Log.d("ProfileViewModel", "Meta salva com sucesso: ${_uiState.value.meta}")
-                } catch (e: Exception) {
-                    _uiState.value = _uiState.value.copy(
-                        errorMessage = "Falha ao salvar meta: ${e.message}",
-                        isSavingMeta = false
-                    )
-                    Log.e("ProfileViewModel", "Erro ao salvar meta: ${e.message}", e)
-                }
-            } else {
-                _uiState.value = _uiState.value.copy(
-                    errorMessage = "Nenhum usuário logado para salvar a meta.",
-                    isSavingMeta = false
-                )
             }
         }
     }

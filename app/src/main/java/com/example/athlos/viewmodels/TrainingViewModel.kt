@@ -41,63 +41,31 @@ class TrainingViewModel(
     val uiState: StateFlow<TrainingUiState> = _uiState.asStateFlow()
 
     init {
-        loadAllWorkoutsAndFavorites()
+        loadWorkoutCategories()
     }
 
-    private fun loadAllWorkoutsAndFavorites() {
-        _uiState.value = _uiState.value.copy(loading = true, errorMessage = null)
-        viewModelScope.launch {
-            val user = authRepository.currentUser
-            if (user != null) {
-                try {
-                    val userData = authRepository.getUserData(user.uid)
-                    val favoriteWorkoutIds = userData?.favoriteWorkouts ?: emptyList()
+    private fun loadWorkoutCategories() {
 
-                    val allMockWorkouts = listOf(
-                        Workout("treino_peito", "Treino de Peito", "Desenvolvimento, Supino, Crucifixo", R.drawable.chest, "chest"),
-                        Workout("treino_costas", "Treino de Costas", "Puxada, Remada, Levantamento Terra", R.drawable.back, "back"),
-                        Workout("treino_quadriceps", "Treino de Quadríceps", "Agachamento, Leg Press, Extensora", R.drawable.quads, "upper legs"),
-                        Workout("treino_ombros", "Treino de Ombros", "Desenvolvimento, Elevação Lateral, Remada Alta", R.drawable.shoulder, "shoulders"),
-                        Workout("treino_biceps", "Treino de Bíceps", "Rosca Direta, Rosca Alternada, Rosca Concentrada", R.drawable.biceps, "upper arms"),
-                        Workout("treino_triceps", "Treino de Tríceps", "Extensão, Tríceps Testa, Mergulho", R.drawable.triceps, "upper arms"),
-                        Workout("treino_abdomen", "Treino de Abdômen", "Abdominal, Prancha, Elevação de Pernas", R.drawable.abs, "waist"),
-                        Workout("treino_gluteos", "Treino de Glúteos", "Agachamento, Glúteo Máquina, Elevação Pélvica", R.drawable.glutes, "upper legs"),
-                        Workout("treino_dorsal", "Treino de Dorsal", "Puxada, Remada, Pullover", R.drawable.dorsal, "back"),
-                        Workout("treino_posterior", "Treino de Posterior", "Stiff, Flexora, Bom Dia", R.drawable.hamstrings, "upper legs"),
-                        Workout("treino_obliquos", "Treino de Oblíquos", "Rotação de Tronco, Flexão Lateral", R.drawable.obliquo, "waist"),
-                        Workout("treino_trapezio", "Treino de Trapézio", "Remada Alta, Encolhimento", R.drawable.trapezius, "neck"),
-                        Workout("treino_panturrilha", "Treino de Panturrilha", "Elevação em Pé, Elevação Sentado", R.drawable.calfs, "lower legs"),
-                        Workout("treino_antebraco", "Treino de Antebraço", "Rosca Punho, Flexão Inversa", R.drawable.forearm, "lower arms")
-                    )
+        _uiState.update { it.copy(loading = true, errorMessage = null) }
 
-                    val updatedWorkouts = allMockWorkouts.map { workout ->
-                        workout.copy(isFavorite = favoriteWorkoutIds.contains(workout.id))
-                    }
-
-                    _uiState.value = _uiState.value.copy(
-                        workouts = updatedWorkouts,
-                        loading = false
-                    )
-                    Log.d("TrainingViewModel", "Todos os treinos carregados. Favoritos do usuário: $favoriteWorkoutIds")
-                } catch (e: Exception) {
-                    _uiState.value = _uiState.value.copy(
-                        errorMessage = "Erro ao carregar treinos: ${e.message}",
-                        loading = false
-                    )
-                    Log.e("TrainingViewModel", "Erro ao carregar treinos: ${e.message}", e)
-                }
-            } else {
-                _uiState.value = _uiState.value.copy(
-                    errorMessage = "Nenhum usuário logado para carregar treinos.",
-                    loading = false
-                )
-                Log.d("TrainingViewModel", "Nenhum usuário logado na TrainingScreen.")
-            }
-        }
-    }
-
-    fun refreshWorkouts() {
-        loadAllWorkoutsAndFavorites()
+        val workoutCategories = listOf(
+            Workout("treino_peito", "Treino de Peito", "Desenvolvimento, Supino, Crucifixo", R.drawable.chest, "chest"),
+            Workout("treino_costas", "Treino de Costas", "Puxada, Remada, Levantamento Terra", R.drawable.back, "back"),
+            Workout("treino_quadriceps", "Treino de Quadríceps", "Agachamento, Leg Press, Extensora", R.drawable.quads, "upper legs"),
+            Workout("treino_ombros", "Treino de Ombros", "Desenvolvimento, Elevação Lateral, Remada Alta", R.drawable.shoulder, "shoulders"),
+            Workout("treino_biceps", "Treino de Bíceps", "Rosca Direta, Rosca Alternada, Rosca Concentrada", R.drawable.biceps, "upper arms"),
+            Workout("treino_triceps", "Treino de Tríceps", "Extensão, Tríceps Testa, Mergulho", R.drawable.triceps, "upper arms"),
+            Workout("treino_abdomen", "Treino de Abdômen", "Abdominal, Prancha, Elevação de Pernas", R.drawable.abs, "waist"),
+            Workout("treino_gluteos", "Treino de Glúteos", "Agachamento, Glúteo Máquina, Elevação Pélvica", R.drawable.glutes, "upper legs"),
+            Workout("treino_dorsal", "Treino de Dorsal", "Puxada, Remada, Pullover", R.drawable.dorsal, "back"),
+            Workout("treino_posterior", "Treino de Posterior", "Stiff, Flexora, Bom Dia", R.drawable.hamstrings, "upper legs"),
+            Workout("treino_obliquos", "Treino de Oblíquos", "Rotação de Tronco, Flexão Lateral", R.drawable.obliquo, "waist"),
+            Workout("treino_trapezio", "Treino de Trapézio", "Remada Alta, Encolhimento", R.drawable.trapezius, "neck"),
+            Workout("treino_panturrilha", "Treino de Panturrilha", "Elevação em Pé, Elevação Sentado", R.drawable.calfs, "lower legs"),
+            Workout("treino_antebraco", "Treino de Antebraço", "Rosca Punho, Flexão Inversa", R.drawable.forearm, "lower arms")
+        )
+        _uiState.update { it.copy(workouts = workoutCategories, loading = false) }
+        Log.d("TrainingViewModel", "Categorias de treino carregadas.")
     }
 
     fun toggleBuildMode() {
@@ -173,52 +141,5 @@ class TrainingViewModel(
 
     fun clearSaveStatusMessage() {
         _uiState.update { it.copy(saveStatusMessage = null) }
-    }
-
-    fun toggleFavorite(workoutId: String, isCurrentlyFavorite: Boolean) {
-        _uiState.value = _uiState.value.copy(isSavingFavorite = true)
-        viewModelScope.launch {
-            val currentUser = authRepository.currentUser
-            if (currentUser != null) {
-                try {
-                    val userData = authRepository.getUserData(currentUser.uid)
-                    val currentFavoriteIds = userData?.favoriteWorkouts ?: emptyList()
-
-                    val newFavoriteIds = if (isCurrentlyFavorite) {
-                        currentFavoriteIds - workoutId
-                    } else {
-                        currentFavoriteIds + workoutId
-                    }
-
-                    authRepository.updateUserData(currentUser.uid, mapOf("favoriteWorkouts" to newFavoriteIds))
-
-                    val updatedWorkouts = _uiState.value.workouts.map { workout ->
-                        if (workout.id == workoutId) {
-                            workout.copy(isFavorite = !isCurrentlyFavorite)
-                        } else {
-                            workout
-                        }
-                    }
-
-                    _uiState.value = _uiState.value.copy(
-                        workouts = updatedWorkouts,
-                        isSavingFavorite = false
-                    )
-                    Log.d("TrainingViewModel", "Status de favorito atualizado para $workoutId: ${!isCurrentlyFavorite}")
-
-                } catch (e: Exception) {
-                    _uiState.value = _uiState.value.copy(
-                        errorMessage = "Falha ao atualizar favorito: ${e.message}",
-                        isSavingFavorite = false
-                    )
-                    Log.e("TrainingViewModel", "Erro ao atualizar favorito: ${e.message}", e)
-                }
-            } else {
-                _uiState.value = _uiState.value.copy(
-                    errorMessage = "Nenhum usuário logado para favoritar.",
-                    isSavingFavorite = false
-                )
-            }
-        }
     }
 }

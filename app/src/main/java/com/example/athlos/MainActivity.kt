@@ -65,7 +65,7 @@ fun AthlosApp() {
         composable("register") { RegisterScreen(mainNavController) }
         composable("main") { MainScreenWithBottomNav(mainNavController = mainNavController) }
         composable("settings") { SettingsScreen() }
-
+        composable("forgot_password") { ForgotPasswordScreen(mainNavController) }
         // ADICIONADO: Rota para a tela Fale Conosco
         composable("contact") {
             ContactScreen(navController = mainNavController)
@@ -163,7 +163,7 @@ fun MainScreenWithBottomNav(mainNavController: NavHostController) {
                 startDestination = Screen.Home.route,
                 modifier = Modifier.padding(innerPadding)
             ) {
-                composable(Screen.Home.route) { HomeScreen() }
+                composable(Screen.Home.route) { HomeScreen(navController = bottomNavController) }
                 composable(Screen.Water.route) { WaterScreen() }
                 composable(Screen.Diary.route) { DiaryScreen() }
                 composable(Screen.Profile.route) { ProfileScreen(mainNavController = mainNavController) }

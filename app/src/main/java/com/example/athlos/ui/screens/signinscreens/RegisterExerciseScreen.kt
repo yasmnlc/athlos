@@ -8,7 +8,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -20,8 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FitnessCenter
 import com.example.athlos.viewmodels.RegisterViewModel
 import com.example.athlos.ui.screens.defaultTextFieldColors
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,7 +45,6 @@ fun RegisterExerciseScreen(navController: NavHostController, viewModel: Register
         speed = 1f
     )
 
-    val registrationLoading = uiState.carregando
     val registrationError = uiState.erroMensagem
 
     LaunchedEffect(registrationError) {
@@ -75,14 +71,14 @@ fun RegisterExerciseScreen(navController: NavHostController, viewModel: Register
         Spacer(Modifier.height(24.dp))
 
         Text(
-            text = "E pra finalizar, o quão ativo você é normalmente?",
+            text = "Qual o seu nível de atividade física?",
             fontSize = 24.sp,
             color = MaterialTheme.colorScheme.onBackground,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
         Text(
-            text = "Sua atividade física é um fator importante para os cálculos de calorias!",
+            text = "Isso é importante para os cálculos de calorias!",
             fontSize = 16.sp,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -132,36 +128,21 @@ fun RegisterExerciseScreen(navController: NavHostController, viewModel: Register
 
         Spacer(Modifier.height(24.dp))
 
+        // --- CORREÇÃO APLICADA AQUI ---
         Button(
             onClick = {
                 if (viewModel.isExerciseValid()) {
-                    // LÓGICA ADICIONADA PARA VERIFICAR O TIPO DE USUÁRIO
-                    val currentUser = FirebaseAuth.getInstance().currentUser
-                    val isGoogleUser = currentUser?.providerData?.any { it.providerId == GoogleAuthProvider.PROVIDER_ID } == true
-
-                    if (isGoogleUser) {
-                        // Se for usuário do Google, apenas salva os dados adicionais que foram coletados
-                        viewModel.salvarDadosAdicionaisDoPerfil()
-                    } else {
-                        // Se for um cadastro normal por email/senha, executa o fluxo completo
-                        viewModel.registrarUsuarioEPerfil()
-                    }
-                    // A navegação para a tela de sucesso já é tratada pelo LaunchedEffect na tela principal de registro.
-                    // Apenas navegamos para a tela intermediária de "carregando".
-                    navController.navigate("register_final_success")
-
+                    // A única responsabilidade deste botão agora é navegar para a próxima tela.
+                    navController.navigate("register_goal")
                 } else {
                     Toast.makeText(context, "Por favor, selecione seu nível de atividade.", Toast.LENGTH_SHORT).show()
                 }
             },
-            enabled = viewModel.isExerciseValid() && !registrationLoading,
+            enabled = viewModel.isExerciseValid(),
             modifier = Modifier.fillMaxWidth(0.6f)
         ) {
-            if (registrationLoading) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
-            } else {
-                Text("Finalizar Cadastro")
-            }
+            // Texto do botão corrigido para indicar que há um próximo passo.
+            Text("Próximo")
         }
     }
 }
