@@ -7,7 +7,6 @@ import java.util.UUID
 @Entity(tableName = "food_entries")
 data class FoodItem(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
-    // Alterado para permitir valores nulos
     val date: String? = null,
     val mealType: String? = null,
     val name: String,

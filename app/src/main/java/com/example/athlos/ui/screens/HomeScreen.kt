@@ -25,7 +25,6 @@ import com.example.athlos.viewmodels.MacroTargets
 
 @Composable
 fun HomeScreen(
-    // Lembre-se de passar o navController a partir da MainActivity
     navController: NavHostController,
     homeViewModel: HomeViewModel = viewModel()
 ) {
@@ -92,7 +91,7 @@ fun HomeScreen(
                 )
             }
 
-            // A lista de treinos
+            //Lista de treinos
             if (uiState.savedWorkouts.isEmpty()) {
                 item {
                     Text(
@@ -103,7 +102,6 @@ fun HomeScreen(
                     )
                 }
             } else {
-                // O bloco "items" agora está no lugar correto.
                 items(uiState.savedWorkouts) { workout ->
                     SavedWorkoutCard(
                         workout = workout,

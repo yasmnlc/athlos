@@ -21,13 +21,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 
-// Função para iniciar uma intenção (abrir email, telefone, etc.)
 private fun sendIntent(context: Context, intent: Intent) {
     try {
         context.startActivity(intent)
     } catch (e: Exception) {
-        // Lidar com o erro caso o app correspondente não esteja instalado
-        // Você pode mostrar um Toast ou um Snackbar aqui
+
         e.printStackTrace()
     }
 }
@@ -79,7 +77,6 @@ fun ContactScreen(navController: NavHostController) {
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
 
-            // Seção de Contatos
             ContactInfoRow(
                 icon = Icons.Default.Email,
                 label = "E-mail",

@@ -32,14 +32,12 @@ import com.example.athlos.ui.models.FoodItem
 import com.example.athlos.ui.theme.DarkGreen
 import com.example.athlos.viewmodels.DiaryViewModel
 import com.example.athlos.viewmodels.FoodSearchViewModel
-import java.time.LocalDate // Importar LocalDate
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-// Cores para a UI, podem ser movidas para um arquivo de tema se preferir
 private val MealTitleBackgroundColor = Color(0xFFE0E0E0)
 private val FoodCardBackgroundColor = Color(0xFFF5F5F5)
 
-// Função de tradução simples (como fornecida anteriormente)
 fun String.traduzirSimples(): String {
     return this.lowercase()
         .replace("chicken", "frango")
@@ -55,15 +53,12 @@ fun String.traduzirSimples(): String {
 
 @Composable
 fun DiaryScreen(
-    // A tela agora usa dois ViewModels: um para o estado do diário e outro para a busca de alimentos.
     diaryViewModel: DiaryViewModel = viewModel(),
     foodSearchViewModel: FoodSearchViewModel = viewModel()
 ) {
-    // O estado agora vem diretamente do DiaryViewModel, que lê do banco de dados Room.
     val uiState by diaryViewModel.uiState.collectAsState()
     val allFoods = uiState.foodEntries
 
-    // Os cálculos de totais continuam funcionando, pois reagem às mudanças na lista de alimentos.
     val totalCalories = allFoods.sumOf { it.calories }.toInt()
     val totalCarb     = allFoods.sumOf { it.carbohydrate }
     val totalProtein  = allFoods.sumOf { it.protein }
@@ -81,7 +76,6 @@ fun DiaryScreen(
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // O cabeçalho com calorias e macros não precisa de alterações.
         Text(
             text = "$totalCalories kcal",
             fontSize = 24.sp,
@@ -108,32 +102,31 @@ fun DiaryScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // As seções de refeição agora filtram a lista única vinda do ViewModel.
-        // O nome da refeição no filtro deve ser EXATAMENTE igual ao mealType salvo no FoodItem.
+
         MealSection(
             title = "CAFÉ DA MANHÃ",
-            mealType = "CAFÉ DA MANHÃ", // Passa o mealType exato
+            mealType = "CAFÉ DA MANHÃ",
             foods = allFoods.filter { it.mealType == "CAFÉ DA MANHÃ" },
             diaryViewModel = diaryViewModel,
             foodSearchViewModel = foodSearchViewModel
         )
         MealSection(
             title = "ALMOÇO",
-            mealType = "ALMOÇO", // Passa o mealType exato
+            mealType = "ALMOÇO",
             foods = allFoods.filter { it.mealType == "ALMOÇO" },
             diaryViewModel = diaryViewModel,
             foodSearchViewModel = foodSearchViewModel
         )
         MealSection(
             title = "JANTAR",
-            mealType = "JANTAR", // Passa o mealType exato
+            mealType = "JANTAR",
             foods = allFoods.filter { it.mealType == "JANTAR" },
             diaryViewModel = diaryViewModel,
             foodSearchViewModel = foodSearchViewModel
         )
         MealSection(
             title = "LANCHES/OUTROS",
-            mealType = "LANCHES/OUTROS", // Passa o mealType exato
+            mealType = "LANCHES/OUTROS",
             foods = allFoods.filter { it.mealType == "LANCHES/OUTROS" },
             diaryViewModel = diaryViewModel,
             foodSearchViewModel = foodSearchViewModel
@@ -146,15 +139,14 @@ fun DiaryScreen(
 @Composable
 fun MealSection(
     title: String,
-    mealType: String, // Adicionado para passar o tipo de refeição para o AlertDialog
-    foods: List<FoodItem>, // A lista agora é imutável (List) em vez de MutableList.
+    mealType: String,
+    foods: List<FoodItem>,
     diaryViewModel: DiaryViewModel,
     foodSearchViewModel: FoodSearchViewModel
 ) {
     var showSearchDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var foodToEdit by remember { mutableStateOf<FoodItem?>(null) }
-    // uiState não é mais usado diretamente aqui, pois foods já é filtrado.
 
     Column(
         modifier = Modifier
@@ -208,18 +200,15 @@ fun MealSection(
                             foodSearchViewModel.isLoading -> CircularProgressIndicator()
                             foodSearchViewModel.errorMessage != null -> Text(foodSearchViewModel.errorMessage ?: "Erro", color = Color.Red)
                             else -> Column {
-                                // Mapeia os resultados da busca para o modelo de dados do BD
                                 foodSearchViewModel.foodList.forEach { searchResult ->
                                     Card(
                                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                         colors = CardDefaults.cardColors(containerColor = FoodCardBackgroundColor),
                                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                                         onClick = {
-                                            // AÇÃO ATUALIZADA: Adiciona o alimento através do DiaryViewModel.
                                             val newEntry = FoodItem(
-                                                // UUID é gerado automaticamente no FoodItem, não precisa aqui
-                                                date = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE), // Garante a data correta
-                                                mealType = mealType, // Usa o mealType passado para a MealSection
+                                                date = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE),
+                                                mealType = mealType,
                                                 name = searchResult.name,
                                                 grams = searchResult.grams,
                                                 baseCalories = searchResult.baseCalories,
@@ -270,7 +259,6 @@ fun MealSection(
                 food = food,
                 onDismiss = { foodToEdit = null },
                 onSave = { updatedGrams ->
-                    // AÇÃO ATUALIZADA: Atualiza o alimento através do DiaryViewModel.
                     diaryViewModel.updateFood(food.copy(grams = updatedGrams))
                     foodToEdit = null
                 }
@@ -288,11 +276,9 @@ fun MealSection(
             )
         } else {
             foods.forEach { food ->
-                // Usar o novo Composable FoodItemCardWithActions para exibir os cards
                 EditableFoodItemCard(
                     food = food,
                     onEditClick = { foodToEdit = food },
-                    // AÇÃO ATUALIZADA: Apaga o alimento através do DiaryViewModel.
                     onDeleteClick = { diaryViewModel.deleteFood(food) }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -301,7 +287,6 @@ fun MealSection(
     }
 }
 
-// Composables auxiliares permanecem inalterados.
 
 @Composable
 fun MacroProgressItem(label: String, progress: Int, progressColor: Color) {
@@ -375,7 +360,7 @@ fun EditableFoodItemCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = food.name.traduzirSimples(), // Usar a função de tradução aqui
+                    text = food.name.traduzirSimples(),
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

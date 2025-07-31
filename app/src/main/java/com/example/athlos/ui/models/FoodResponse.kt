@@ -19,28 +19,28 @@ data class FatSecretFood(
 fun FatSecretFood.toFoodItem(): FoodItem {
     val desc = this.description
 
-    // Função auxiliar para extrair um valor numérico da string de descrição
+    // auxiliar para extrair um valor numérico da string de descrição
     fun extractValue(pattern: String): Double {
         return Regex(pattern).find(desc)?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.0
     }
 
-    // Extrai cada valor nutricional usando a função auxiliar
+    // extrai cada valor nutricional usando a função auxiliar
     val calories = extractValue("""Calories: (\d+\.?\d*)kcal""").toInt()
     val fat = extractValue("""Fat: (\d+\.?\d*)g""")
     val carbs = extractValue("""Carbs: (\d+\.?\d*)g""")
     val protein = extractValue("""Protein: (\d+\.?\d*)g""")
 
-    // Retorna o FoodItem com todos os campos obrigatórios preenchidos
+    // retorna o FoodItem com todos os campos obrigatórios preenchidos
     return FoodItem(
         id = this.id,
         name = this.name,
-        grams = 100, // A descrição é baseada em 100g
+        grams = 100,
         baseCalories = calories,
         baseFat = fat,
         baseCarbohydrate = carbs,
         baseProtein = protein,
-        baseFiber = 0.0, // A descrição desta API não fornece fibras
-        date = null,     // Nulo, pois ainda não foi adicionado a um diário
-        mealType = null  // Nulo, pois ainda não foi adicionado a uma refeição
+        baseFiber = 0.0,
+        date = null,
+        mealType = null
     )
 }

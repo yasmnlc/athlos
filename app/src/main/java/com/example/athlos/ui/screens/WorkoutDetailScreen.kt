@@ -26,7 +26,6 @@ fun SavedWorkoutDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Carrega os dados apenas uma vez
     LaunchedEffect(workoutId) {
         viewModel.loadWorkoutDetails(workoutId)
     }

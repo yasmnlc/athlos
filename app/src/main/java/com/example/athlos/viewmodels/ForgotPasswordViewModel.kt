@@ -1,7 +1,7 @@
 package com.example.athlos.viewmodels
 
 import android.util.Log
-import android.util.Patterns // Para validação de e-mail
+import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.athlos.data.repository.AuthRepository
@@ -18,7 +18,7 @@ data class ForgotPasswordUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val successMessage: String? = null,
-    val emailSent: Boolean = false // Indica se o e-mail foi enviado com sucesso
+    val emailSent: Boolean = false
 )
 
 class ForgotPasswordViewModel(
@@ -48,7 +48,7 @@ class ForgotPasswordViewModel(
             }
 
             try {
-                authRepository.sendPasswordResetEmail(_uiState.value.email) // Chama o método do repositório
+                authRepository.sendPasswordResetEmail(_uiState.value.email)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     successMessage = "Um e-mail de redefinição de senha foi enviado para ${_uiState.value.email}.",

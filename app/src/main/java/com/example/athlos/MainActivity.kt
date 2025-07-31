@@ -1,31 +1,24 @@
 package com.example.athlos
 
-import android.app.Application
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
-import com.example.athlos.data.repository.AuthRepository
-import com.example.athlos.data.repository.FirebaseAuthRepository
 import com.example.athlos.ui.screens.*
 import com.example.athlos.ui.screens.signinscreens.RegisterScreen
 import com.example.athlos.ui.theme.AthlosTheme
@@ -33,7 +26,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 
 
 class MainActivity : ComponentActivity() {
@@ -66,7 +58,6 @@ fun AthlosApp() {
         composable("main") { MainScreenWithBottomNav(mainNavController = mainNavController) }
         composable("settings") { SettingsScreen() }
         composable("forgot_password") { ForgotPasswordScreen(mainNavController) }
-        // ADICIONADO: Rota para a tela Fale Conosco
         composable("contact") {
             ContactScreen(navController = mainNavController)
         }
@@ -212,9 +203,9 @@ fun MainScreenWithBottomNav(mainNavController: NavHostController) {
 }
 
 sealed class Screen(val route: String, val icon: ImageVector) {
-    object Home : Screen("home", Icons.Default.Home)
-    object Water : Screen("water", Icons.Default.LocalDrink)
-    object Diary : Screen("diary", Icons.AutoMirrored.Filled.MenuBook)
-    object Training : Screen("training", Icons.Default.FitnessCenter)
-    object Profile : Screen("profile", Icons.Default.Person)
+    object Home : Screen("Início", Icons.Default.Home)
+    object Water : Screen("Água", Icons.Default.LocalDrink)
+    object Diary : Screen("Diário", Icons.AutoMirrored.Filled.MenuBook)
+    object Training : Screen("Treinos", Icons.Default.FitnessCenter)
+    object Profile : Screen("Perfil", Icons.Default.Person)
 }

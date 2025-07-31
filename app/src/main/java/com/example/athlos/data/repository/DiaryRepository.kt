@@ -17,18 +17,18 @@ class DiaryRepository(
     private val auth: FirebaseAuth
 ) {
 
-    private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE // AAAA-MM-DD
+    private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
 
-    // A leitura é sempre feita do banco local (Room) para performance e capacidade offline.
+    // leitura é sempre feita do banco local (Room) para performance e capacidade offline.
     fun getEntriesForDate(date: LocalDate): Flow<List<FoodItem>> {
         return foodEntryDao.getFoodEntriesForDate(date.format(dateFormatter))
     }
 
     suspend fun addFoodEntry(foodItem: FoodItem) {
-        // 1. Salva localmente (rápido e offline)
+        // salva localmente (rápido e offline)
         foodEntryDao.insertFoodEntry(foodItem)
 
-        // 2. Sincroniza com o Firebase
+        // sincroniza com o Firebase
         try {
             val userId = auth.currentUser?.uid ?: throw IllegalStateException("Usuário não está logado.")
             firestore.collection("users").document(userId)
@@ -37,15 +37,14 @@ class DiaryRepository(
             Log.d("DiaryRepository", "Entrada de alimento ${foodItem.id} sincronizada com o Firestore.")
         } catch (e: Exception) {
             Log.e("DiaryRepository", "Falha ao sincronizar adição com o Firestore: ${e.message}", e)
-            // Opcional: Adicionar lógica para tentar sincronizar mais tarde se falhar.
         }
     }
 
     suspend fun updateFoodEntry(foodItem: FoodItem) {
-        // 1. Atualiza localmente
+        // atualiza localmente
         foodEntryDao.updateFoodEntry(foodItem)
 
-        // 2. Sincroniza a atualização com o Firebase
+        // sincroniza a atualização com o Firebase
         try {
             val userId = auth.currentUser?.uid ?: throw IllegalStateException("Usuário não está logado.")
             firestore.collection("users").document(userId)
@@ -58,10 +57,10 @@ class DiaryRepository(
     }
 
     suspend fun deleteFoodEntry(foodItem: FoodItem) {
-        // 1. Apaga localmente
+        // apaga localmente
         foodEntryDao.deleteFoodEntry(foodItem)
 
-        // 2. Sincroniza a exclusão com o Firebase
+        // sincroniza a exclusão com o Firebase
         try {
             val userId = auth.currentUser?.uid ?: throw IllegalStateException("Usuário não está logado.")
             firestore.collection("users").document(userId)
@@ -75,7 +74,7 @@ class DiaryRepository(
 
     suspend fun clearOldEntries() {
         val yesterday = LocalDate.now().minusDays(1)
-        // Esta operação é apenas local, para limpar o cache do dispositivo.
+        // esta operação é apenas local, para limpar o cache do dispositivo.
         foodEntryDao.deleteAllOldEntries(yesterday.format(dateFormatter))
     }
 

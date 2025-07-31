@@ -34,8 +34,8 @@ class WorkoutDetailViewModel(
     private val exerciseRepository: ExerciseRepository = FirestoreExerciseRepository(FirebaseFirestore.getInstance())
 ) : ViewModel() {
 
-    private val youTubeApiKey = "AIzaSyDF71ScCOEuw-sm9qAlAIJ7vF-X79mt978" // Lembre-se de proteger sua chave API
-    private val exerciseDbApiKey = "69a1f86bdfmsh0a6e1a654dae000p197607jsn6acb47efc61e" // Lembre-se de proteger sua chave API
+    private val youTubeApiKey = "AIzaSyDF71ScCOEuw-sm9qAlAIJ7vF-X79mt978"
+    private val exerciseDbApiKey = "69a1f86bdfmsh0a6e1a654dae000p197607jsn6acb47efc61e"
 
     private val _uiState = MutableStateFlow(WorkoutDetailState())
     val uiState: StateFlow<WorkoutDetailState> = _uiState.asStateFlow()
@@ -63,7 +63,6 @@ class WorkoutDetailViewModel(
                             if (exercise == null) {
                                 Log.d("WorkoutDetailVM", "Cache MISS para ID $exerciseId. Buscando na API...")
                                 try {
-                                    // MUDANÇA PRINCIPAL: Busca apenas UM exercício por ID
                                     exercise = ExerciseDbService.api.getExerciseById(
                                         id = exerciseId,
                                         apiKey = exerciseDbApiKey
@@ -82,10 +81,9 @@ class WorkoutDetailViewModel(
                                 Log.d("WorkoutDetailVM", "Cache HIT para ID $exerciseId: ${exercise.name}")
                             }
 
-                            // 4. (Opcional) Busca vídeo do YouTube se não existir
+                            // 4.  Busca vídeo do YouTube se não existir
                             if (exercise.videoId == null) {
                                 val videoId = findYouTubeVideoId(exercise.name)
-                                // Atualiza o objeto e salva novamente no cache com o ID do vídeo
                                 exercise = exercise.copy(videoId = videoId)
                                 exerciseRepository.saveExercise(exercise)
                             }

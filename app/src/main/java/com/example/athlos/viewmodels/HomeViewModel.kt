@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.athlos.data.model.User
-import com.example.athlos.ui.models.CustomWorkout // Garante que o tipo correto está sendo usado
+import com.example.athlos.ui.models.CustomWorkout
 import com.example.athlos.data.repository.AuthRepository
 import com.example.athlos.data.repository.FirebaseAuthRepository
 import com.google.firebase.auth.FirebaseAuth
@@ -22,7 +22,7 @@ data class HomeUiState(
     val aguaAtual: Int = 0,
     val aguaMeta: Int = 2000,
     val diasTreino: Int = 0,
-    val savedWorkouts: List<CustomWorkout> = emptyList(), // O tipo está correto aqui
+    val savedWorkouts: List<CustomWorkout> = emptyList(),
     val tdee: Double = 0.0,
     val caloriesForLoss: Double = 0.0,
     val caloriesForGain: Double = 0.0,
@@ -58,11 +58,9 @@ class HomeViewModel(
             if (user != null) {
                 try {
                     val userData = authRepository.getUserData(user.uid)
-                    // CORREÇÃO: Carrega diretamente os treinos salvos do tipo CustomWorkout
                     val savedWorkouts = authRepository.getCustomWorkouts()
 
                     if (userData != null) {
-                        // ... (lógica de cálculo nutricional - sem alterações)
                         val peso = userData.peso.toFloatOrNull()
                         val altura = userData.altura.toFloatOrNull()
                         val idade = userData.idade.replace(" anos", "").toIntOrNull()
@@ -84,8 +82,6 @@ class HomeViewModel(
                             macrosForGain = MacroTargets(gainProtein, gainFat, gainCarb)
                         }
 
-                        // CORREÇÃO: A lógica antiga que criava uma lista de `Workout` foi removida.
-                        // Agora passamos a lista correta `savedWorkouts` para o estado.
                         _uiState.value = _uiState.value.copy(
                             currentUserData = userData,
                             loading = false,

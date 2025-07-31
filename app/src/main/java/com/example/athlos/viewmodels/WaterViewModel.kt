@@ -1,19 +1,14 @@
 package com.example.athlos.viewmodels
 
 import android.util.Log
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.athlos.data.repository.AuthRepository
-import com.example.athlos.data.repository.FirebaseAuthRepository
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import com.example.athlos.utils.await
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import com.example.athlos.NotificationScheduler

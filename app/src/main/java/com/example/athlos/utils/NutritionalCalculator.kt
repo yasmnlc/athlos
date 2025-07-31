@@ -15,9 +15,7 @@ object NutritionalCalculator {
         }
     }
 
-    /**
-     * Calcula a Taxa Metabólica Basal (TMB) usando a equação de Mifflin-St Jeor.
-     */
+    //Calcula a Taxa Metabólica Basal (TMB) usando a equação de Mifflin-St Jeor.
     fun calculateBMR(pesoKg: Float, alturaCm: Float, idade: Int, sexo: String): Double {
         return if (sexo.equals("Masculino", ignoreCase = true)) {
             (10 * pesoKg) + (6.25 * alturaCm) - (5 * idade) + 5
@@ -26,9 +24,7 @@ object NutritionalCalculator {
         }
     }
 
-    /**
-     * Calcula o Gasto Energético Total (GET)
-     */
+    //Calcula o Gasto Energético Total (GET)
     fun calculateTDEE(bmr: Double, activityLevelDescription: String): Double {
         val activityLevel = ActivityLevel.fromDescription(activityLevelDescription)
         return if (activityLevel != null) {
@@ -38,10 +34,8 @@ object NutritionalCalculator {
         }
     }
 
-    /**
-     * Calcula os macronutrientes com base na meta calórica.
-     * Retorna um Triple com (Proteína em g, Gordura em g, Carboidratos em g)
-     */
+    //Calcula os macronutrientes com base na meta calórica.
+    //Retorna um Triple com (Proteína em g, Gordura em g, Carboidratos em g)
     fun calculateMacros(targetCalories: Double, pesoKg: Float): Triple<Int, Int, Int> {
         // 1. Calcular Proteína (2.0g por kg de peso)
         val proteinGrams = (pesoKg * 2.0).toInt()

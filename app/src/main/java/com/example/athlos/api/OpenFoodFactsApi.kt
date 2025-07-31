@@ -4,18 +4,18 @@ import com.google.gson.annotations.SerializedName
 import retrofit2.http.GET
 import retrofit2.http.Query
 
-// Define a estrutura da resposta completa da API
+// define a estrutura da resposta completa da API
 data class OpenFoodFactsSearchResponse(
     val products: List<OpenFoodProduct>
 )
 
-// Define a estrutura de um único produto na lista
+// define a estrutura de um único produto na lista
 data class OpenFoodProduct(
     val product_name: String?,
     val nutriments: Nutriments?
 )
 
-// Define a estrutura dos nutrientes
+// define a estrutura dos nutrientes
 data class Nutriments(
     @SerializedName("energy-kcal_100g")
     val energyKcal100g: Float?,
@@ -33,7 +33,7 @@ data class Nutriments(
     val fiber_100g: Float?
 )
 
-// Define a interface da API para o Retrofit
+// define a interface da API para o Retrofit
 interface OpenFoodFactsApi {
     @GET("cgi/search.pl?search_simple=1&action=process&json=1&lc=pt&fields=product_name,nutriments")
     suspend fun searchFoods(

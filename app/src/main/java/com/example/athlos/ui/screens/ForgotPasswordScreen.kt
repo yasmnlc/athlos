@@ -38,7 +38,6 @@ fun ForgotPasswordScreen(
         uiState.successMessage?.let {
             Toast.makeText(context, it, Toast.LENGTH_LONG).show()
             viewModel.clearMessages() // Limpa a mensagem após exibir
-            // Opcional: Navegar de volta para a tela de login após o sucesso
             navController.popBackStack()
         }
         uiState.errorMessage?.let {

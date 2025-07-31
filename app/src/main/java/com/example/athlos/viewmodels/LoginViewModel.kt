@@ -106,7 +106,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                             // Usuário já existe e tem dados, vá para a tela principal
                             _uiState.value = _uiState.value.copy(
                                 isLoading = false,
-                                isAuthenticated = true, // Mantemos para compatibilidade se precisar
+                                isAuthenticated = true,
                                 googleNavDestination = GoogleLoginNavigation.TO_MAIN
                             )
                             Log.d("LoginViewModel", "Usuário do Google já cadastrado. Navegando para main.")
@@ -122,7 +122,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
                             _uiState.value = _uiState.value.copy(
                                 isLoading = false,
-                                isAuthenticated = true, // Mantemos para compatibilidade
+                                isAuthenticated = true,
                                 googleNavDestination = GoogleLoginNavigation.TO_REGISTRATION
                             )
                             Log.d("LoginViewModel", "Primeiro login com Google. Navegando para o fluxo de cadastro.")

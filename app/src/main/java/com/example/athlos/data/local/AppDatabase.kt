@@ -22,7 +22,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "athlos_database"
                 )
-                    .fallbackToDestructiveMigration() // <-- ESTA LINHA ESTAVA FALTANDO
+                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance

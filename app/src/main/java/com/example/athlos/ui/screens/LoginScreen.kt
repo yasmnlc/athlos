@@ -183,8 +183,8 @@ fun LoginScreen(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color.White, // Botão branco para Google
-                contentColor = Color.DarkGray // Texto cinza para Google
+                containerColor = Color.White,
+                contentColor = Color.DarkGray
             ),
             elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
         ) {
@@ -194,7 +194,7 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.google_logo), // Certifique-se de ter 'google_logo.png' em res/drawable
+                    painter = painterResource(id = R.drawable.google_logo),
                     contentDescription = "Google Logo",
                     modifier = Modifier.size(24.dp)
                 )
@@ -207,7 +207,7 @@ fun LoginScreen(
         Spacer(Modifier.height(16.dp))
 
         // Seção para Esqueci a senha e Cadastre-se
-        TextButton(onClick = { navController.navigate("forgot_password") }) { // Adicione rota para esqueci a senha
+        TextButton(onClick = { navController.navigate("forgot_password") }) {
             Text("Esqueceu a senha?", color = MaterialTheme.colorScheme.primary)
         }
 

@@ -81,13 +81,12 @@ private const val TRAINING_REMINDER_ID_12PM = 102
 private const val TRAINING_REMINDER_ID_3PM = 103
 private const val TRAINING_REMINDER_ID_6PM = 104
 
-// UPDATED Data Class to include days of the week
 data class CustomNotification(
     val id: Int,
     val message: String,
     val hour: Int,
     val minute: Int,
-    val daysOfWeek: Set<Int> = emptySet(), // e.g., {Calendar.MONDAY, Calendar.WEDNESDAY}
+    val daysOfWeek: Set<Int> = emptySet(),
     val enabled: Boolean = true
 )
 
@@ -182,14 +181,12 @@ fun SettingsScreen() {
         }
     }
 
-    // Permission Launchers
     val requestPostNotificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
             handleScheduleCustomNotification(context, customNotifications, customNotificationMessage,
                 customNotificationHour, customNotificationMinute, selectedDays, editingNotificationId, saveCustomNotifications)
-            // Reset fields
             customNotificationMessage = ""
             customNotificationHour = defaultHour
             customNotificationMinute = defaultMinute
@@ -209,7 +206,6 @@ fun SettingsScreen() {
                 Toast.makeText(context, "Permissão de alarme exato concedida.", Toast.LENGTH_SHORT).show()
                 handleScheduleCustomNotification(context, customNotifications, customNotificationMessage,
                     customNotificationHour, customNotificationMinute, selectedDays, editingNotificationId, saveCustomNotifications)
-                // Reset fields
                 customNotificationMessage = ""
                 customNotificationHour = defaultHour
                 customNotificationMinute = defaultMinute
@@ -221,7 +217,6 @@ fun SettingsScreen() {
         }
     }
 
-    // Main Column
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -235,7 +230,6 @@ fun SettingsScreen() {
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        // --- Preferences Section ---
         Text(
             text = "Preferências",
             fontSize = 20.sp,
@@ -270,7 +264,6 @@ fun SettingsScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // --- Notifications Section ---
         Text(
             text = "Notificações",
             fontSize = 20.sp,
@@ -279,7 +272,6 @@ fun SettingsScreen() {
         )
         Divider(modifier = Modifier.padding(bottom = 16.dp))
 
-        // MASTER NOTIFICATION SWITCH
         PreferenceSwitchRow(
             title = "Notificações Gerais",
             checked = notificationsEnabled,
@@ -287,7 +279,6 @@ fun SettingsScreen() {
                 scope.launch {
                     context.dataStore.edit { preferences ->
                         preferences[NOTIFICATIONS_ENABLED_KEY] = isChecked
-                        // If master switch is turned OFF, turn off all other notifications
                         if (!isChecked) {
                             preferences[TRAINING_REMINDER_ENABLED_KEY] = false
                             preferences[WATER_REMINDER_ENABLED_KEY] = false
@@ -296,7 +287,6 @@ fun SettingsScreen() {
                             preferences[MEAL_DINNER_REMINDER_ENABLED_KEY] = false
                             preferences[MEAL_SNACKS_REMINDER_ENABLED_KEY] = false
 
-                            // Cancel all hardcoded notifications
                             NotificationScheduler.cancelNotification(context, TRAINING_REMINDER_ID_7AM)
                             NotificationScheduler.cancelNotification(context, TRAINING_REMINDER_ID_12PM)
                             NotificationScheduler.cancelNotification(context, TRAINING_REMINDER_ID_3PM)
@@ -307,7 +297,6 @@ fun SettingsScreen() {
                             NotificationScheduler.cancelNotification(context, MEAL_DINNER_ID)
                             NotificationScheduler.cancelNotification(context, MEAL_SNACKS_ID)
 
-                            // Disable and cancel all custom notifications
                             val jsonString = preferences[CUSTOM_NOTIFICATIONS_KEY] ?: "[]"
                             val listType = object : TypeToken<List<CustomNotification>>() {}.type
                             val currentList = Gson().fromJson<List<CustomNotification>>(jsonString, listType)
@@ -325,7 +314,6 @@ fun SettingsScreen() {
             }
         )
 
-        // UPDATED TRAINING REMINDER
         PreferenceSwitchRow(
             title = "Lembrar de Treinar",
             checked = trainingReminderEnabled,
@@ -381,7 +369,6 @@ fun SettingsScreen() {
             modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
         )
 
-        // --- Meal Notifications ---
         MealNotificationSetting(
             title = "Café da Manhã",
             enabled = mealBreakfastReminderEnabled,
@@ -508,7 +495,6 @@ fun SettingsScreen() {
 
         Divider(modifier = Modifier.padding(vertical = 16.dp))
 
-        // --- Custom Notifications Section ---
         Text(
             text = "Agendar Notificação Personalizada",
             fontSize = 18.sp,
@@ -527,7 +513,6 @@ fun SettingsScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Time Picker Button
         Button(
             onClick = {
                 val timePickerDialog = TimePickerDialog(
@@ -550,7 +535,6 @@ fun SettingsScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Day of Week Picker
         DayOfWeekSelector(
             selectedDays = selectedDays,
             onDaySelected = { day ->
@@ -565,7 +549,6 @@ fun SettingsScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Add/Update Notification Button
         Button(
             onClick = {
                 if (customNotificationMessage.isBlank()) {
@@ -594,7 +577,6 @@ fun SettingsScreen() {
                         ) == PackageManager.PERMISSION_GRANTED -> {
                             handleScheduleCustomNotification(context, customNotifications, customNotificationMessage,
                                 customNotificationHour, customNotificationMinute, selectedDays, editingNotificationId, saveCustomNotifications)
-                            // Reset fields
                             customNotificationMessage = ""
                             customNotificationHour = defaultHour
                             customNotificationMinute = defaultMinute
@@ -608,7 +590,6 @@ fun SettingsScreen() {
                 } else {
                     handleScheduleCustomNotification(context, customNotifications, customNotificationMessage,
                         customNotificationHour, customNotificationMinute, selectedDays, editingNotificationId, saveCustomNotifications)
-                    // Reset fields
                     customNotificationMessage = ""
                     customNotificationHour = defaultHour
                     customNotificationMinute = defaultMinute
@@ -627,7 +608,6 @@ fun SettingsScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // List of Custom Notifications
         if (customNotifications.isNotEmpty()) {
             Text(
                 text = "Minhas Notificações Personalizadas",
@@ -689,7 +669,6 @@ fun SettingsScreen() {
     }
 }
 
-// --- Reusable Composables ---
 
 @Composable
 fun PreferenceSwitchRow(
@@ -831,7 +810,6 @@ fun CustomNotificationItem(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Message and Time
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = notification.message,
@@ -845,7 +823,6 @@ fun CustomNotificationItem(
                         color = if (isEnabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                     )
                 }
-                // Action Buttons
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onEdit, enabled = masterSwitchEnabled) {
                         Icon(Icons.Default.Edit, contentDescription = "Editar Notificação")
@@ -861,7 +838,6 @@ fun CustomNotificationItem(
                     )
                 }
             }
-            // Display Selected Days
             if (notification.daysOfWeek.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 Text(
@@ -874,7 +850,6 @@ fun CustomNotificationItem(
     }
 }
 
-// --- Helper Functions ---
 
 private fun handleScheduleCustomNotification(
     context: Context,
@@ -916,7 +891,6 @@ private fun handleScheduleCustomNotification(
 private fun scheduleCustomNotification(context: Context, notification: CustomNotification) {
     val title = "Lembrete Athlos Personalizado"
 
-    // If no days are selected, schedule a one-time alarm
     if (notification.daysOfWeek.isEmpty()) {
         val calendar = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, notification.hour)
@@ -937,7 +911,7 @@ private fun scheduleCustomNotification(context: Context, notification: CustomNot
             notification.id
         )
         Toast.makeText(context, "Notificação agendada para %02d:%02d!".format(notification.hour, notification.minute), Toast.LENGTH_LONG).show()
-    } else { // Schedule repeating alarms for the selected days
+    } else {
         notification.daysOfWeek.forEach { dayOfWeek ->
             val calendar = Calendar.getInstance().apply {
                 set(Calendar.DAY_OF_WEEK, dayOfWeek)
@@ -947,12 +921,10 @@ private fun scheduleCustomNotification(context: Context, notification: CustomNot
                 set(Calendar.MILLISECOND, 0)
             }
 
-            // If the time has already passed for this day, schedule it for next week
             if (calendar.before(Calendar.getInstance())) {
                 calendar.add(Calendar.WEEK_OF_YEAR, 1)
             }
 
-            // Generate a unique ID for each day's alarm to avoid collisions
             val dailyNotificationId = notification.id + dayOfWeek
 
             NotificationScheduler.scheduleRepeatingNotification(

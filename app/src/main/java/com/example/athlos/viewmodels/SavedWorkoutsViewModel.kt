@@ -46,7 +46,6 @@ class SavedWorkoutsViewModel(
         viewModelScope.launch {
             try {
                 authRepository.deleteCustomWorkout(workoutId)
-                // Remove o treino da lista local para atualizar a UI instantaneamente
                 _uiState.update {
                     val updatedList = it.savedWorkouts.filter { workout -> workout.id != workoutId }
                     it.copy(savedWorkouts = updatedList)

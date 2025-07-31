@@ -17,7 +17,7 @@ data class DiaryUiState(
     val selectedDate: LocalDate = LocalDate.now(),
     val foodEntries: List<FoodItem> = emptyList(),
     val isLoading: Boolean = true,
-    val calorieGoal: Int = 2200, // Valores padrão
+    val calorieGoal: Int = 2200, // valores padrão
     val proteinGoal: Double = 120.0,
     val carbGoal: Double = 250.0,
     val fatGoal: Double = 70.0
@@ -46,7 +46,7 @@ class DiaryViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            // 1. Carregar dados do usuário para calcular metas
+            // carregar dados do usuário para calcular metas
             val user = diaryRepository.getUserData()
             if (user != null) {
                 val peso = user.peso.toFloatOrNull()
@@ -79,7 +79,7 @@ class DiaryViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
 
-            // 2. Carregar as entradas de comida do diário
+            // carregar as entradas de comida do diário
             diaryRepository.getEntriesForDate(date).collect { entries ->
                 _uiState.update {
                     it.copy(foodEntries = entries, isLoading = false, selectedDate = date)
